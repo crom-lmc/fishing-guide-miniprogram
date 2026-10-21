@@ -1,0 +1,57 @@
+<view class="wrap {{tc}}">
+  <view class="card accent">
+    <text class="h2">附近水域</text>
+    <text class="small muted">进入页面会自动精确定位到当前位置；拖动地图可换搜索中心，点「重新定位」回到我的位置。找到的水面点条目可在微信地图里查看，点「收藏」存进钓点地图。</text>
+  </view>
+
+  <map id="nearMap" class="map" latitude="{{lat}}" longitude="{{lng}}" markers="{{markers}}"
+       scale="13" show-location bindregionchange="onRegionChange"
+       style="width:100%;height:440rpx"></map>
+
+  <view class="grow">
+    <text class="gtxt {{located ? '' : 'warn'}}">{{geoMsg || '尚未取得坐标'}}</text>
+    <view class="gbtn {{locating ? 'dis' : ''}}" bindtap="onLocateTap">{{locating ? '定位中…' : '📍 重新定位'}}</view>
+  </view>
+
+  <!-- 附近水域 -->
+  <view class="card mt2">
+    <text class="h2">附近河流 · 水库 · 湖泊</text>
+    <view class="chips mt">
+      <view class="chip {{radius === item.v ? 'on' : ''}}" wx:for="{{radiusOpts}}" wx:key="v"
+            data-v="{{item.v}}" bindtap="pickRadius">{{item.n}}</view>
+    </view>
+    <view class="btn {{loading ? 'dis' : ''}}" bindtap="searchWater">{{loading ? '查询中…' : '📍 查附近水域'}}</view>
+
+    <view class="plist mt2" wx:if="{{list.length}}">
+      <view class="prow" wx:for="{{list}}" wx:key="key">
+        <view class="pmain" data-i="{{index}}" bindtap="openItem">
+          <text class="pname">{{item.name}}</text>
+          <text class="tiny muted">{{item.type}}{{item.distText ? ' · 直线 ' + item.distText : ''}}{{item.seg > 1 ? ' · 共 ' + item.seg + ' 段' : ''}}</text>
+        </view>
+        <text class="pbtn" data-i="{{index}}" bindtap="saveSpot">收藏</text>
+      </view>
+    </view>
+    <text class="tiny muted mt" wx:if="{{msg}}">{{msg}}</text>
+  </view>
+
+  <!-- 不依赖云函数：借微信地图选点页的搜索 -->
+  <view class="card">
+    <text class="h2">找具体钓场 / 水面（微信地图搜索）</text>
+    <text class="small muted mt">打开微信地图选点页，顶部搜索「钓场 / 水库 / 河 / 鱼塘」，选中后可直接收藏成钓点。不依赖云函数。</text>
+    <view class="btn ghost mt" bindtap="pickPoi">🔎 打开微信地图搜索</view>
+
+    <view class="plist mt2" wx:if="{{picked}}">
+      <view class="prow">
+        <view class="pmain" bindtap="openPicked">
+          <text class="pname">{{picked.name}}</text>
+          <text class="tiny muted">{{picked.addr || '无地址'}}{{picked.distText ? ' · 直线 ' + picked.distText : ''}}</text>
+        </view>
+        <text class="pbtn" bindtap="savePicked">收藏</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <text class="tiny muted">距离为到该点的直线距离，出钓前请自行确认该处是否允许垂钓；收费钓场请先征得同意并缴费。数据来源：{{source === 'tencent' ? '腾讯位置服务' : 'OpenStreetMap'}}{{cost ? ' · 本次 ' + cost + ' 秒' : ''}}{{ver ? ' · 云函数 v' + ver : ''}}，坐标与检索参数仅用于本次查询。</text>
+  </view>
+</view>

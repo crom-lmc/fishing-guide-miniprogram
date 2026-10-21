@@ -1,0 +1,49 @@
+<view class="wrap {{tc}}">
+  <view class="card accent">
+    <text class="h2">安全与法规</text>
+    <text class="small muted">钓鱼是休闲，不是冒险。这一页请务必读完，尤其是高压线和禁渔期两节。</text>
+  </view>
+
+  <view class="card danger">
+    <text class="h3">⚡ {{first}}</text>
+  </view>
+
+  <view class="card">
+    <text class="h3">涉水与人身安全 · 必守</text>
+    <view class="li" wx:for="{{safety}}" wx:key="*this">{{item}}</view>
+  </view>
+
+  <view class="card">
+    <text class="h3">健康与水域保护</text>
+    <view class="li" wx:for="{{health}}" wx:key="*this">{{item}}</view>
+  </view>
+
+  <view class="card" wx:for="{{laws}}" wx:key="t">
+    <view class="rh">
+      <text class="h3">{{item.t}}</text>
+      <text class="tag w">{{item.lv}}</text>
+    </view>
+    <text class="small muted mt">{{item.b}}</text>
+  </view>
+
+  <view class="card">
+    <text class="h3">四季出钓速查</text>
+    <view class="tbl mt">
+      <view class="tr th">
+        <text class="td">季节</text><text class="td">水层/钓位</text><text class="td">时间</text><text class="td">味型</text>
+      </view>
+      <view class="tr" wx:for="{{season}}" wx:key="s">
+        <text class="td">{{item.s}}</text>
+        <text class="td">{{item.pos}}</text>
+        <text class="td">{{item.time}}</text>
+        <text class="td">{{item.taste}}</text>
+      </view>
+    </view>
+    <text class="tiny muted mt">对象鱼：春 鲫鱼/鲤鱼（产卵期）｜夏 草鱼/鲢鳙/翘嘴/黑鱼｜秋 大体型鲤草/鲫/鲈｜冬 鲫鱼</text>
+  </view>
+
+  <view class="card">
+    <text class="h3">出钓前 30 秒自检</text>
+    <view class="li" wx:for="{{check}}" wx:key="*this">{{item}}</view>
+  </view>
+</view>

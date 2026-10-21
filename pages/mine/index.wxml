@@ -1,0 +1,63 @@
+<view class="wrap {{tc}}">
+
+  <view class="card accent">
+    <text class="h2">我的钓鱼</text>
+    <view class="stats stats4 mt">
+      <view class="stat"><view class="v">{{stat.times}}</view><view class="k">出钓次数</view></view>
+      <view class="stat"><view class="v">{{stat.total}}</view><view class="k">累计渔获（尾）</view></view>
+      <view class="stat"><view class="v">{{stat.max}}</view><view class="k">最大单尾（kg）</view></view>
+      <view class="stat"><view class="v">{{stat.hours}}</view><view class="k">累计时长（h）</view></view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="entry" data-url="/pages/log/index" bindtap="go">
+      <text class="ico">📒</text>
+      <view class="eb"><text class="nm">渔获日志</text><text class="small muted">记录每次出钓，可云同步备份</text></view>
+      <text class="arrow">›</text>
+    </view>
+    <view class="entry" data-url="/pages/map/index" bindtap="go">
+      <text class="ico">📍</text>
+      <view class="eb"><text class="nm">钓点地图</text><text class="small muted">已收藏 {{spots}} 个钓点</text></view>
+      <text class="arrow">›</text>
+    </view>
+    <view class="entry" data-url="/pages/nearby/index" bindtap="go">
+      <text class="ico">🌊</text>
+      <view class="eb"><text class="nm">附近水域</text><text class="small muted">按半径找河流、水库、湖泊</text></view>
+      <text class="arrow">›</text>
+    </view>
+    <view class="entry" data-url="/pages/gear/index" bindtap="go">
+      <text class="ico">🎒</text>
+      <view class="eb"><text class="nm">装备清单</text><text class="small muted">已备齐 {{gearDone}} / {{gearTotal}} 项</text></view>
+      <text class="arrow">›</text>
+    </view>
+    <view class="entry" bindtap="goStats">
+      <text class="ico">📊</text>
+      <view class="eb"><text class="nm">数据统计</text><text class="small muted">月度走势、鱼种构成、单尾纪录</text></view>
+      <text class="arrow">›</text>
+    </view>
+    <view class="entry" bindtap="toggleTheme">
+      <text class="ico">{{themeIcon}}</text>
+      <view class="eb"><text class="nm">外观</text><text class="small muted">当前{{themeName}}模式，点击切换</text></view>
+      <view class="tk {{themeLight ? 'on' : ''}}"><view class="knob"></view></view>
+    </view>
+    <view class="entry" data-url="/pages/sync/index" bindtap="go">
+      <text class="ico">☁️</text>
+      <view class="eb"><text class="nm">云同步</text><text class="small muted">换手机不丢日志与钓点</text></view>
+      <text class="arrow">›</text>
+    </view>
+    <view class="entry" data-url="/pages/rules/index" bindtap="go">
+      <text class="ico">⚠️</text>
+      <view class="eb"><text class="nm">安全与法规</text><text class="small muted">高压线、禁渔期、涉水安全</text></view>
+      <text class="arrow">›</text>
+    </view>
+  </view>
+
+  <view class="card">
+    <text class="h3">关于</text>
+    <text class="small muted mt">钓鱼指南 · 从入门到上鱼。出钓指数、鱼种图鉴、钓法教学、饵料配方、装备清单与渔获记录，全部数据仅保存在本机，不会上传。</text>
+    <view class="hr"></view>
+    <view class="btn ghost sm" bindtap="clearAll">清空本机数据</view>
+  </view>
+
+</view>

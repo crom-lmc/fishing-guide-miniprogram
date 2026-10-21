@@ -1,0 +1,118 @@
+<view class="wrap {{tc}}">
+
+  <view class="card accent">
+    <view class="stats">
+      <view class="stat"><view class="v">{{stat.times}}</view><view class="k">出钓次数</view></view>
+      <view class="stat"><view class="v">{{stat.total}}</view><view class="k">累计渔获（尾）</view></view>
+      <view class="stat"><view class="v">{{stat.max}}</view><view class="k">最大单尾（kg）</view></view>
+      <view class="stat"><view class="v">{{stat.perHour}}</view><view class="k">平均每小时</view></view>
+      <view class="stat"><view class="v">{{stat.hours}}</view><view class="k">累计时长（h）</view></view>
+      <view class="stat"><view class="v small">{{stat.top}}</view><view class="k">最常上鱼</view></view>
+    </view>
+  </view>
+
+  <!-- 出钓计时器：记录开始时间 + 当时天气，结束时自动填进下面的表单 -->
+  <view class="card {{timer.on ? 'accent' : ''}}">
+    <view class="lrow">
+      <text class="h3">⏱ 出钓计时</text>
+      <text class="tiny muted">{{timer.on ? (timer.begin + ' 下竿') : '结束会自动填时长'}}</text>
+    </view>
+
+    <view wx:if="{{!timer.on}}">
+      <text class="small muted">点开始会记下时间与当时天气，收竿时自动把时长、钓点、天气填进记录。</text>
+      <view class="btn mt" bindtap="startTimer">开始作钓</view>
+    </view>
+
+    <view wx:else>
+      <view class="tnum">{{timer.text}}</view>
+      <text class="small muted" wx:if="{{timer.spot}}">{{timer.spot}}</text>
+      <text class="tiny muted" wx:if="{{timer.weather}}">{{timer.weather}}</text>
+      <view class="btn-row mt2">
+        <view class="btn" bindtap="stopTimer">收竿，填进记录</view>
+        <view class="btn ghost" bindtap="cancelTimer">放弃</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <text class="h3">新增记录</text>
+
+    <view class="field">
+      <text class="lb">日期</text>
+      <picker mode="date" value="{{form.date}}" bindchange="input" data-k="date">
+        <text class="val">{{form.date}}</text>
+      </picker>
+    </view>
+    <view class="field">
+      <text class="lb">钓点</text>
+      <input class="ipt" placeholder="哪里钓的" placeholder-class="ph" value="{{form.spot}}" data-k="spot" bindinput="input" />
+      <text class="locbtn" bindtap="pickSpot" bindlongpress="pickSpotByMap">{{locating ? '定位中…' : '📍 定位'}}</text>
+    </view>
+    <view class="field">
+      <text class="lb">时长（h）</text>
+      <input class="ipt" type="digit" placeholder="如 3.5" placeholder-class="ph" value="{{form.hours}}" data-k="hours" bindinput="input" />
+    </view>
+    <view class="field">
+      <text class="lb">主要鱼种</text>
+      <input class="ipt" placeholder="点下方标签快速选" placeholder-class="ph" value="{{form.fish}}" data-k="fish" bindinput="input" />
+    </view>
+    <view class="chips">
+      <!-- 选中态跟输入框联动：手打鱼名也能高亮，再点同一条取消选择 -->
+      <text class="chip sm {{form.fish === item ? 'on' : ''}}"
+            wx:for="{{fishNames}}" wx:key="*this" data-v="{{item}}" bindtap="pickFish">{{item}}</text>
+    </view>
+    <view class="field">
+      <text class="lb">数量（尾）</text>
+      <input class="ipt" type="number" placeholder="0" placeholder-class="ph" value="{{form.count}}" data-k="count" bindinput="input" />
+    </view>
+    <view class="field">
+      <text class="lb">最大单尾 kg</text>
+      <input class="ipt" type="digit" placeholder="0.00" placeholder-class="ph" value="{{form.max}}" data-k="max" bindinput="input" />
+    </view>
+    <view class="field">
+      <text class="lb">备注</text>
+      <input class="ipt" placeholder="天气、饵料、漂相、教训…" placeholder-class="ph" value="{{form.note}}" data-k="note" bindinput="input" />
+    </view>
+
+    <view class="mt">
+      <view class="btnrow">
+        <view class="btn ghost sm" bindtap="choosePhoto">📷 拍照 / 选图</view>
+        <view class="btn ghost sm {{recognizing ? 'dis' : ''}}" bindtap="recFish">🤖 识别鱼获</view>
+      </view>
+      <image wx:if="{{form.photo}}" src="{{form.photo}}" class="photo" mode="widthFix" />
+      <text class="tiny geo" wx:if="{{recMsg}}">{{recMsg}}</text>
+    </view>
+
+    <view class="mt2"><view class="btn" bindtap="submit">添加记录</view></view>
+  </view>
+
+  <view class="card" wx:for="{{list}}" wx:key="id">
+    <view class="lrow">
+      <text class="ldate">{{item.date}}</text>
+      <text class="small muted" wx:if="{{item.spot}}" data-lat="{{item.lat}}" data-lng="{{item.lng}}" data-name="{{item.spot}}" bindtap="openAmap">📍 {{item.spot}}{{item.lat ? ' ↗' : ''}}</text>
+      <view class="lops">
+        <text class="pbtn" data-id="{{item.id}}" bindtap="goCard">卡片</text>
+        <text class="del" data-id="{{item.id}}" bindtap="del">删除</text>
+      </view>
+    </view>
+    <view class="mt">
+      <text class="tag g" wx:if="{{item.fish}}">{{item.fish}}</text>
+      <text class="tag" wx:if="{{item.count}}">{{item.count}} 尾</text>
+      <text class="tag b" wx:if="{{item.max}}">最大 {{item.max}} kg</text>
+      <text class="tag c" wx:if="{{item.hours}}">{{item.hours}} h</text>
+    </view>
+    <text class="small muted mt" wx:if="{{item.note}}">{{item.note}}</text>
+    <image wx:if="{{item.photo}}" src="{{item.photo}}" class="photo mt" mode="widthFix" />
+  </view>
+
+  <view class="empty" wx:if="{{list.length === 0}}">还没有记录。钓完回来花 30 秒记一笔，一个月后你会感谢自己。</view>
+
+  <view class="center mt2" wx:if="{{list.length > 0}}">
+    <view class="btn ghost sm" bindtap="clearAll">清空全部记录</view>
+  </view>
+
+  <!-- 静默定位用的隐藏地图：不占版面、不可见，只借它的 moveToLocation 拿精确坐标 -->
+  <map id="logMap" class="geohide" latitude="{{form.lat || 34.3416}}" longitude="{{form.lng || 108.9398}}"
+       show-location bindregionchange="onGeoRegionChange"></map>
+
+</view>

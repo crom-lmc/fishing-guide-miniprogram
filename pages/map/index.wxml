@@ -1,0 +1,59 @@
+<view class="wrap {{tc}}">
+  <view class="card accent">
+    <text class="h2">钓点地图</text>
+    <text class="small muted">把常去的钓点标在地图上，出钓前一眼看全。钓点存在本机，可点「分享」转发给钓友。</text>
+  </view>
+
+  <map id="spotMap" class="map" latitude="{{lat}}" longitude="{{lng}}"
+       markers="{{markers}}" scale="12" show-location bindregionchange="onRegionChange" style="width:100%;height:520rpx"></map>
+
+  <view class="btn-row mt">
+    <view class="btn ghost" bindtap="locate">📍 我的位置</view>
+    <view class="btn" bindtap="addSpot">＋ 添加钓点</view>
+  </view>
+
+  <text class="geo" wx:if="{{geoMsg}}">{{geoMsg}}</text>
+
+  <!-- 好友分享进来的钓点：数据来自页面参数，不在本机 storage 里 -->
+  <view class="card mt2 spot" wx:if="{{shared}}">
+    <view class="lrow">
+      <text class="sico">🎁</text>
+      <text class="h3 snm">好友分享的钓点</text>
+      <text class="del" bindtap="dismissShared">忽略</text>
+    </view>
+    <view class="sind">
+      <text class="small muted">{{shared.name}}{{shared.addr ? ' · ' + shared.addr : ''}}</text>
+      <view class="ops mt">
+        <text class="btn sm" bindtap="saveShared">＋ 收藏到我的钓点</text>
+        <text class="btn ghost sm" bindtap="openSharedAmap">在高德打开</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="card mt2 spot" wx:for="{{spots}}" wx:key="id">
+    <view class="lrow" data-id="{{item.id}}" bindtap="openSpot">
+      <text class="sico">📍</text>
+      <text class="h3 snm">{{item.name}}</text>
+      <text class="arrow">›</text>
+    </view>
+    <view class="sind">
+      <text class="small muted" wx:if="{{item.addr}}">{{item.addr}}</text>
+      <view class="chips" wx:if="{{item.tags.length > 0}}">
+        <text class="chip sm" wx:for="{{item.tags}}" wx:for-item="t" wx:key="*this">{{t}}</text>
+      </view>
+      <view class="ops spotops mt">
+        <text class="btn ghost sm" data-s="{{item}}" bindtap="openAmap">在高德地图打开</text>
+        <button class="sbtn" hover-class="none" open-type="share"
+                data-name="{{item.name}}" data-addr="{{item.addr}}"
+                data-lat="{{item.lat}}" data-lng="{{item.lng}}">分享</button>
+        <text class="del" data-id="{{item.id}}" bindtap="del">删除</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty" wx:if="{{spots.length === 0 && !shared}}">还没有收藏钓点，点「添加钓点」把你常去的位置记下来。</view>
+
+  <view class="card">
+    <text class="tiny muted">出钓前请自行确认该处是否允许垂钓；收费钓场请事先征得同意并缴费。</text>
+  </view>
+</view>

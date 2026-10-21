@@ -1,0 +1,49 @@
+<view class="wrap {{tc}}">
+
+  <view class="card accent">
+    <text class="h2">数据统计</text>
+    <text class="small muted">全部依据本机渔获日志计算，不联网、不上传。</text>
+    <view class="stats stats4 mt">
+      <view class="stat"><view class="v">{{stat.times}}</view><view class="k">出钓次数</view></view>
+      <view class="stat"><view class="v">{{stat.total}}</view><view class="k">渔获（尾）</view></view>
+      <view class="stat"><view class="v">{{stat.max}}</view><view class="k">最大单尾（kg）</view></view>
+      <view class="stat"><view class="v">{{stat.hours}}</view><view class="k">时长（h）</view></view>
+    </view>
+  </view>
+
+  <view class="empty" wx:if="{{empty}}">还没有记录。去「渔获日志」记一笔，这里就能看到月度走势与鱼种构成。</view>
+
+  <block wx:else>
+
+    <view class="card">
+      <text class="h2">近 12 个月渔获</text>
+      <text class="small muted">按月汇总尾数，看得出淡旺季。</text>
+      <canvas type="2d" id="cvMonth" class="cv" style="height:320rpx"></canvas>
+    </view>
+
+    <view class="card">
+      <text class="h2">鱼种构成</text>
+      <text class="small muted">按累计尾数排序{{topFish.length > 1 ? '，取前 ' + topFish.length + ' 种' : ''}}。</text>
+      <canvas type="2d" id="cvFish" class="cv" style="height:{{fishH}}px"></canvas>
+    </view>
+
+    <view class="card">
+      <text class="h2">最大单尾走势</text>
+      <text class="small muted">每月的最大单尾（kg）；该月没有记录时按 0 计。</text>
+      <canvas type="2d" id="cvMax" class="cv" style="height:300rpx"></canvas>
+    </view>
+
+    <view class="card" wx:if="{{topSpot.length}}">
+      <text class="h2">高产钓点</text>
+      <view class="srow" wx:for="{{topSpot}}" wx:key="n">
+        <text class="sn">{{item.n}}</text>
+        <text class="sc">{{item.c}} 尾 · {{item.t}} 次</text>
+      </view>
+    </view>
+
+  </block>
+
+  <view class="card">
+    <text class="tiny muted">图表只统计「渔获日志」里已保存的记录；日志清空后这里也会一并归零。钓点统计按记录里的钓点名称匹配，名称写得不一致会被算成两个钓点。</text>
+  </view>
+</view>

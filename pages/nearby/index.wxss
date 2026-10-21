@@ -1,0 +1,53 @@
+/* 定位状态行 + 手动定位按钮 */
+.grow {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 14rpx 4rpx 0;
+}
+.gtxt {
+  flex: 1;
+  min-width: 0;
+  font-size: 22rpx;
+  line-height: 1.45;
+  color: var(--a2);
+}
+.gtxt.warn { color: var(--warn); }
+.gbtn {
+  flex-shrink: 0;
+  font-size: 22rpx;
+  line-height: 1;
+  color: var(--a2);
+  border: 1rpx solid var(--a2);
+  border-radius: 999rpx;
+  padding: 14rpx 22rpx;
+}
+.gbtn.dis { opacity: .5; }
+
+/* 附近水域 / 钓点：结果列表 */
+.plist { display: flex; flex-direction: column; }
+.prow {
+  display: flex;
+  align-items: center;
+  padding: 18rpx 0;
+  border-bottom: 1rpx solid var(--line);
+}
+.prow:last-child { border-bottom: none; }
+.pmain { flex: 1; min-width: 0; }
+.pname {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-bottom: 4rpx;
+}
+.pbtn {
+  flex-shrink: 0;
+  margin-left: 20rpx;
+  font-size: 22rpx;
+  line-height: 1;
+  color: var(--a2);
+  border: 1rpx solid var(--a2);
+  border-radius: 999rpx;
+  padding: 14rpx 22rpx;
+}

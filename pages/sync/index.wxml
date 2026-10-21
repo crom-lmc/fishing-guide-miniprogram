@@ -1,0 +1,29 @@
+<view class="wrap {{tc}}">
+  <view class="card accent">
+    <text class="h2">☁️ 云同步</text>
+    <text class="small muted">把渔获日志、收藏钓点和装备勾选存到云端，换手机或重装小程序后能恢复。数据按微信账号隔离，只有你自己能看到。</text>
+  </view>
+
+  <view class="card">
+    <text class="h3">当前状态</text>
+    <view class="kv"><text class="k">本机</text><text class="v">{{localLog}} 条日志 · {{localSpot}} 个钓点</text></view>
+    <view class="kv"><text class="k">云端</text><text class="v">{{cloudLog}} 条日志 · {{cloudSpot}} 个钓点</text></view>
+    <text class="tiny muted mt">{{cloudAt}}</text>
+  </view>
+
+  <view class="card">
+    <text class="h3">操作</text>
+    <view class="btn mt {{busy ? 'dis' : ''}}" bindtap="upload">⬆️ 上传到云端（本机覆盖云端）</view>
+    <view class="btn ghost mt {{busy ? 'dis' : ''}}" bindtap="merge">🔀 合并两边（推荐）</view>
+    <view class="btn ghost mt {{busy ? 'dis' : ''}}" bindtap="restore">⬇️ 用云端覆盖本机</view>
+    <text class="tiny muted mt" wx:if="{{msg}}">{{msg}}</text>
+  </view>
+
+  <view class="card">
+    <text class="tiny muted">
+      合并规则：按记录 id 取并集，同一条以修改时间更晚的为准，合并结果会同步回云端。
+      注意：合并只做相加，本机删掉的记录若云端还有，会被恢复；想让两边完全一致，请用「上传到云端」。
+      云同步需要云函数 sync 已部署，首次上传会自动创建数据库集合。
+    </text>
+  </view>
+</view>

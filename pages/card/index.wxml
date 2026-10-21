@@ -1,0 +1,18 @@
+<view class="wrap {{tc}}">
+  <view class="card accent">
+    <text class="h2">渔获战绩卡片</text>
+    <text class="small muted">把这一条记录生成一张图，保存相册或直接发给钓友看。</text>
+  </view>
+
+  <view class="cvbox">
+    <canvas type="2d" id="cardCv" class="cv" style="height:{{cvH}}rpx"></canvas>
+  </view>
+
+  <view class="btn-row mt2">
+    <view class="btn" bindtap="save">保存到相册</view>
+    <view class="btn ghost" bindtap="preview">预览</view>
+  </view>
+  <text class="tiny muted ctr mt">保存后可在相册里长按发给钓友</text>
+
+  <text class="tiny muted mt" wx:if="{{err}}">{{err}}</text>
+</view>

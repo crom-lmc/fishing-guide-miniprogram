@@ -1,0 +1,29 @@
+<view class="wrap {{tc}}">
+  <view class="card accent">
+    <text class="h2">装备清单</text>
+    <text class="small muted">勾选后自动保存在本机。新手按「台钓入门」一栏配齐即可开钓，其余按需增补。</text>
+    <view class="hr"></view>
+    <view class="ckstat">
+      <text class="h3">已备齐 {{done}} / {{total}} 项</text>
+      <view class="btnrow">
+        <text class="btn ghost sm" bindtap="all">全部勾选</text>
+        <text class="btn ghost sm" bindtap="none">全部清空</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="card" wx:for="{{sections}}" wx:key="g">
+    <view class="sechd">
+      <text class="h3">{{item.g}}</text>
+      <text class="btn ghost sm" data-g="{{item.g}}" bindtap="toggleSec">全选/取消</text>
+    </view>
+    <view class="ck" wx:for="{{item.items}}" wx:for-item="it" wx:key="key" data-k="{{it.key}}" bindtap="toggle">
+      <view class="box {{it.on ? 'on' : ''}}">{{it.on ? '✓' : ''}}</view>
+      <view class="ckb">
+        <text class="ckn">{{it.nm}}</text>
+        <text class="tiny muted" wx:if="{{it.spec}}"> · {{it.spec}}</text>
+      </view>
+      <text class="qty">{{it.qty}}</text>
+    </view>
+  </view>
+</view>

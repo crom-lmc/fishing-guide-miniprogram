@@ -1,0 +1,26 @@
+/* 钓点地图页局部微调：让提示行与卡片内文字左对齐 */
+
+/* 卡片内边距是 28rpx，提示行补同样的左缩进，避免贴着屏幕边缘、
+   与下方卡片里的文字错开一格 */
+.geo { padding: 0 28rpx; }
+
+/* 钓点卡底部操作行：左侧「在高德地图打开」拉伸，右侧「分享 / 删除」靠右垂直居中 */
+.spotops { align-items: center; }
+.spotops .del { flex-shrink: 0; line-height: 1; }
+
+/* 分享按钮原来挂在 .lops 里，挪到 .ops 后要补回同样的小胶囊样式 */
+.spotops .sbtn {
+  width: auto;
+  margin: 0;
+  padding: 0 22rpx;
+  height: 46rpx;
+  line-height: 46rpx;
+  font-size: 22rpx;
+  font-weight: 400;
+  color: var(--a2);
+  background: transparent;
+  border: 1rpx solid var(--a2);
+  border-radius: 999rpx;
+  flex-shrink: 0;
+}
+.spotops .sbtn::after { border: none; }

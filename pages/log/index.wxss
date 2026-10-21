@@ -1,0 +1,22 @@
+/* 渔获日志局部样式 */
+
+/* 计时器大数字 */
+.tnum {
+  display: block;
+  font-size: 56rpx;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--a2);
+  margin: 8rpx 0 4rpx;
+}
+
+/* 记录行内「卡片」按钮 */
+.lops .pbtn {
+  font-size: 22rpx;
+  line-height: 1;
+  color: var(--a2);
+  border: 1rpx solid var(--a2);
+  border-radius: 999rpx;
+  padding: 12rpx 20rpx;
+}
+.lops .del { margin-left: 20rpx; }

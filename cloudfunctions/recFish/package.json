@@ -1,0 +1,7 @@
+{
+  "name": "recFish",
+  "version": "1.0.0",
+  "description": "渔获照片识别（智谱 GLM-4V，Key 存云端）",
+  "main": "index.js",
+  "dependencies": {}
+}

@@ -1,0 +1,16 @@
+# 依赖（体积大、可重装，不同步）
+node_modules/
+miniprogram_npm/
+
+# 系统与编辑器垃圾
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# 日志
+*.log
+npm-debug.log*
+
+# WorkBuddy 本地工作数据（会话数据，与工程无关）
+.workbuddy/

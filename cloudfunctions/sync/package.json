@@ -1,0 +1,9 @@
+{
+  "name": "sync",
+  "version": "1.0.0",
+  "description": "渔获日志 / 钓点 / 装备的云同步（按 openid 存云数据库）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

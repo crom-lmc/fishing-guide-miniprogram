@@ -1,0 +1,62 @@
+/* 钓点详情 */
+.minimap {
+  width: 100%;
+  height: 300rpx;
+  border-radius: 20rpx;
+  overflow: hidden;
+}
+
+/* 标签分组 */
+.tg-group { padding: 18rpx 0; border-bottom: 1rpx solid var(--line); }
+.tg-group:last-of-type { border-bottom: none; }
+.tg-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12rpx; }
+.tg-n { font-size: 26rpx; font-weight: 600; }
+
+.custom-row { display: flex; align-items: center; gap: 16rpx; }
+.cipt {
+  flex: 1;
+  background: var(--card2);
+  border-radius: 12rpx;
+  padding: 14rpx 20rpx;
+  font-size: 25rpx;
+  color: var(--tx);
+}
+
+/* 照片墙：三列网格，格子按 1:1 正方形，加号格与照片格同尺寸 */
+.wall { display: flex; flex-wrap: wrap; }
+.cell {
+  width: 33.333%;
+  box-sizing: border-box;
+  padding: 4rpx;
+}
+/* 不叫 .ph：全局 .ph 是 input 占位符的颜色类，重名容易误改 */
+.pimg {
+  width: 100%;
+  height: 220rpx;
+  border-radius: 14rpx;
+  display: block;
+}
+.cell.add {
+  height: 220rpx;
+  border: 2rpx dashed var(--line);
+  border-radius: 14rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+}
+.cell.add .plus { font-size: 44rpx; color: var(--muted); line-height: 1; }
+
+.ta {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 180rpx;
+  margin-top: 16rpx;
+  padding: 18rpx 20rpx;
+  background: var(--card2);
+  border-radius: 14rpx;
+  font-size: 26rpx;
+  color: var(--tx);
+  line-height: 1.7;
+}

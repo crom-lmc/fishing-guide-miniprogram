@@ -1,0 +1,288 @@
+<view class="wrap {{tc}}">
+
+  <!-- 参数输入 -->
+  <view class="card">
+    <view class="cardhd">
+      <text class="h2">今日出钓指数</text>
+      <view class="btn ghost sm {{geoLoading ? 'dis' : ''}}" bindtap="autoWeather">{{geoLoading ? "定位中…" : "📍 刷新"}}</view>
+    </view>
+    <view class="georow" wx:if="{{geoMsg}}">
+      <text class="tiny geo">{{geoMsg}}</text>
+      <text class="tiny plink" bindtap="pickLocation">位置不准？地图选点</text>
+    </view>
+
+    <!-- 进页面已自动定位填好天气，参数默认折叠成一行；点开才能手动改 -->
+    <view class="foldrow mt" bindtap="toggleAdv">
+      <view class="foldb">
+        <text class="tiny muted">{{geoReady ? (advOpen ? "手动调整参数" : "当前条件 · 点开可手动调整") : "默认参数 · 还没取到实时天气"}}</text>
+        <text class="small">{{condBrief}}</text>
+      </view>
+      <text class="foldar {{advOpen ? 'on' : ''}}">›</text>
+    </view>
+
+    <block wx:if="{{advOpen}}">
+    <view class="hr"></view>
+    <text class="small muted">综合天气、气温、气压、风力风向与时段评估当前鱼情。气压是决定性因素——鱼对气压变化比人对天气更敏感。</text>
+
+    <view class="field">
+      <text class="lb">天气</text>
+      <view class="opts">
+        <view wx:for="{{weatherOpts}}" wx:key="k"
+              class="opt {{f.w === item.k ? 'on' : ''}}"
+              data-k="w" data-v="{{item.k}}" bindtap="pick">{{item.n}}</view>
+      </view>
+    </view>
+
+    <view class="field">
+      <text class="lb">气温</text>
+      <slider min="-20" max="50" value="{{f.t}}" show-value
+              activeColor="{{skin.a2}}" backgroundColor="{{skin.track}}" block-size="20"
+              bindchanging="sliderTemp" bindchange="sliderTemp" style="width:420rpx"></slider>
+    </view>
+
+    <view class="field">
+      <text class="lb">气压</text>
+      <slider min="960" max="1045" value="{{f.p}}" show-value
+              activeColor="{{skin.a1}}" backgroundColor="{{skin.track}}" block-size="20"
+              bindchanging="sliderPres" bindchange="sliderPres" style="width:420rpx"></slider>
+    </view>
+
+    <view class="field">
+      <text class="lb">风力</text>
+      <view class="opts">
+        <view wx:for="{{windOpts}}" wx:key="k"
+              class="opt {{f.wi === item.k ? 'on' : ''}}"
+              data-k="wi" data-v="{{item.k}}" bindtap="pick">{{item.n}}</view>
+      </view>
+    </view>
+
+    <view class="field">
+      <text class="lb">风向</text>
+      <view class="opts">
+        <view wx:for="{{dirOpts}}" wx:key="k"
+              class="opt {{f.dr === item.k ? 'on' : ''}}"
+              data-k="dr" data-v="{{item.k}}" bindtap="pick">{{item.n}}</view>
+      </view>
+    </view>
+
+    <view class="field">
+      <text class="lb">时段</text>
+      <view class="opts">
+        <view wx:for="{{timeOpts}}" wx:key="k"
+              class="opt {{f.tm === item.k ? 'on' : ''}}"
+              data-k="tm" data-v="{{item.k}}" bindtap="pick">{{item.n}}</view>
+      </view>
+    </view>
+
+    <view class="field">
+      <text class="lb">季节</text>
+      <view class="opts">
+        <view wx:for="{{seasonOpts}}" wx:key="k"
+              class="opt {{f.se === item.k ? 'on' : ''}}"
+              data-k="se" data-v="{{item.k}}" bindtap="pick">{{item.n}}</view>
+      </view>
+    </view>
+    </block>
+
+    <view class="field">
+      <text class="lb">水域</text>
+      <view class="opts">
+        <view wx:for="{{wtypeOpts}}" wx:key="k"
+              class="opt {{f.wt === item.k ? 'on' : ''}}"
+              data-k="wt" data-v="{{item.k}}" bindtap="pick">{{item.n}}</view>
+      </view>
+    </view>
+
+    <view class="btn-row mt2">
+      <view class="btn ghost" bindtap="reset">重置</view>
+      <view class="btn" bindtap="goLog">记一笔渔获</view>
+    </view>
+  </view>
+
+  <!-- 结果：默认只留分数 + 评级 + 一句结论，点右上角箭头才展开各项因素 -->
+  <view class="card accent" wx:if="{{result}}">
+    <text class="foldar abs {{resOpen ? 'on' : ''}}" bindtap="toggleRes">›</text>
+    <view class="score-wrap">
+      <text class="score-num" style="color:{{result.tone}}">{{result.score}}</text>
+      <text class="score-unit">综合分</text>
+    </view>
+    <view class="center">
+      <text class="h3" style="color:{{result.tone}}">{{result.lv}}</text>
+      <text class="small muted mt">{{result.adv}}</text>
+    </view>
+
+    <block wx:if="{{resOpen}}">
+      <view class="hr"></view>
+      <view class="bar" wx:for="{{bars}}" wx:key="nm">
+        <text class="nm">{{item.nm}}</text>
+        <view class="track"><view class="fill" style="width:{{item.pct}}%;background:{{item.color}}"></view></view>
+        <text class="sc" style="color:{{item.color}}">{{item.val}}</text>
+      </view>
+    </block>
+    <text class="foldtip" wx:else bindtap="toggleRes">展开各项评分 ∨</text>
+  </view>
+
+  <!-- 今日时机：日出日落 / 黄金窗口 / 月相 / 推荐目标鱼（全部本地计算，不联网） -->
+  <view class="card" wx:if="{{sun && sun.ok}}">
+    <view class="cardhd" bindtap="toggleSun">
+      <text class="h2">今日时机</text>
+      <view class="hdend">
+        <text class="tiny tag2 {{sun.stage === '夜间' ? '' : 'on'}}">{{sun.stage}}</text>
+        <text class="foldar {{sunOpen ? 'on' : ''}}">›</text>
+      </view>
+    </view>
+
+    <!-- 折叠态：只留一行摘要 -->
+    <view class="sunsum" wx:if="{{!sunOpen}}" bindtap="toggleSun">
+      <text class="small muted">日出 {{sun.rise}}</text>
+      <text class="sundiv">｜</text>
+      <text class="small muted">日落 {{sun.set}}</text>
+      <text class="sundiv">｜</text>
+      <text class="small muted">{{moon.emoji}} {{moon.name}}</text>
+    </view>
+
+    <block wx:if="{{sunOpen}}">
+    <text class="small muted">日出日落、黄金窗口与月相均按当地坐标本地推算；目标鱼按当前气温与季节从图鉴数据匹配。</text>
+
+    <view class="sunrow mt2">
+      <view class="suncol">
+        <text class="tiny muted">天亮</text>
+        <text class="sunt">{{sun.dawn}}</text>
+      </view>
+      <view class="suncol hi">
+        <text class="tiny muted">日出</text>
+        <text class="sunt">🌅 {{sun.rise}}</text>
+      </view>
+      <view class="suncol hi">
+        <text class="tiny muted">日落</text>
+        <text class="sunt">🌇 {{sun.set}}</text>
+      </view>
+      <view class="suncol">
+        <text class="tiny muted">天黑</text>
+        <text class="sunt">{{sun.dusk}}</text>
+      </view>
+    </view>
+
+    <view class="goldrow mt">
+      <view class="gold">
+        <text class="tiny muted">清晨窗口</text>
+        <text class="gt">{{sun.w1}}</text>
+      </view>
+      <view class="gold">
+        <text class="tiny muted">傍晚窗口</text>
+        <text class="gt">{{sun.w2}}</text>
+      </view>
+    </view>
+    <text class="tiny muted mt">正午 {{sun.noon}}｜昼长 {{sun.dayLen}}｜夜钓天全黑 {{sun.darkAt}}。下一个 {{sun.next}} {{sun.left}}。</text>
+
+    <view class="hr"></view>
+
+    <view class="mrow">
+      <text class="moonico">{{moon.emoji}}</text>
+      <view class="moonb">
+        <text class="h3">{{moon.name}} · 月龄 {{moon.age}} 天</text>
+        <text class="small muted">{{moon.nightLight}}</text>
+      </view>
+    </view>
+
+    <view class="hr"></view>
+
+    <text class="h3">今日推荐目标鱼</text>
+    <view class="note warn mt" wx:if="{{tgWeak}}">
+      <text>{{f.t}}℃ 已偏离绝大多数鱼种的适宜区间，以下仅为相对最接近的对象，实际基本停口，建议改期。</text>
+    </view>
+    <view class="tg" wx:for="{{targets}}" wx:key="id" data-n="{{item.fish.n}}" bindtap="openFish">
+      <view class="tav" style="background:{{item.bg}}">{{item.first}}</view>
+      <view class="tbody">
+        <view class="tgnm">
+          <text class="nm">{{item.fish.n}}</text>
+          <text class="tgsc" style="color:{{item.color}}">{{item.score}}</text>
+        </view>
+        <text class="small muted">{{item.note}}</text>
+        <text class="tiny muted2">{{item.tip}}</text>
+      </view>
+      <text class="tgar">›</text>
+    </view>
+    <text class="tiny muted mt">匹配度只看水温与季节，未计入气压风力；点任意一条可看该鱼种的详细钓法。</text>
+    </block>
+  </view>
+
+  <!-- 逐时适钓 · 未来 24 小时 -->
+  <view class="card" wx:if="{{hourly}}">
+    <view class="cardhd">
+      <text class="h2">逐时适钓 · 未来 24 小时</text>
+      <text class="tiny muted">最佳 {{hBest}}</text>
+    </view>
+
+    <view class="chart">
+      <view class="hbars">
+        <view class="hcol" wx:for="{{hourly}}" wx:key="hh" data-i="{{index}}" bindtap="pickHour">
+          <view class="hbar" style="height:{{item.pct}}%;background:{{item.color}}"></view>
+        </view>
+        <canvas type="2d" id="pcurve" class="pcurve"></canvas>
+      </view>
+      <view class="hticks">
+        <text class="htick" wx:for="{{hTicks}}" wx:key="hh" style="left:{{item.left}}%">{{item.hh}}</text>
+      </view>
+    </view>
+
+    <view class="legend">
+      <view class="lg" wx:for="{{hLegend}}" wx:key="t"><view class="dot" style="background:{{item.c}}"></view><text>{{item.t}}</text></view>
+      <view class="lg"><view class="dot line"></view><text>气压曲线（右轴）</text></view>
+    </view>
+
+    <view class="hsum mt">
+      <text class="small muted">{{hPres}}</text>
+      <text class="small muted">{{hTemp}}</text>
+    </view>
+    <text class="tiny muted mt">逐时预报 © Open-Meteo。柱 = 该小时适钓指数（沿用上方季节与水域设置），紫线 = 气压走势；点柱子可把该小时参数回填到上方。</text>
+  </view>
+
+  <view class="card" wx:if="{{!hourly}}">
+    <text class="h2">逐时适钓 · 未来 24 小时</text>
+    <text class="small muted mt">点上方「📍 自动取当前位置天气」后，这里会显示未来 24 小时的逐时适钓柱状图与气压走势曲线。</text>
+  </view>
+
+  <!-- 出钓方案 -->
+  <view class="card" wx:if="{{result}}">
+    <text class="h2">出钓方案</text>
+    <view class="grid2 mt">
+      <view>
+        <text class="h3">钓层与钓位</text>
+        <text class="small muted">水深参考 {{result.plan.depth[0]}}｜{{result.plan.depth[1]}}</text>
+      </view>
+      <view>
+        <text class="h3">饵料方向</text>
+        <text class="small muted">{{result.plan.baitTip}}</text>
+      </view>
+      <view>
+        <text class="h3">时段策略</text>
+        <text class="small muted">{{result.plan.timeTip}}</text>
+      </view>
+      <view>
+        <text class="h3">气压解读</text>
+        <text class="small muted">{{result.plan.pressureTip}}</text>
+      </view>
+      <view>
+        <text class="h3">风力应对</text>
+        <text class="small muted">{{result.plan.windTip}}</text>
+      </view>
+      <view>
+        <text class="h3">建议目标鱼</text>
+        <view class="mt">
+          <text class="tag g" wx:for="{{result.plan.targets}}" wx:key="*this">{{item}}</text>
+        </view>
+      </view>
+    </view>
+    <view class="hr"></view>
+    <text class="tiny muted">当前条件：{{condText}}</text>
+    <view class="mt2">
+      <view class="btn ghost sm" bindtap="goFish">看看这些鱼怎么钓 →</view>
+    </view>
+  </view>
+  <!-- 精确定位用的隐藏地图：移出可视区但保留尺寸，
+       靠 moveToLocation 让中心对齐真实位置、再读中心坐标（详见 index.js preciseLocate） -->
+  <map id="geoMap" class="geohide" latitude="{{lat}}" longitude="{{lng}}"
+       show-location bindregionchange="onGeoRegionChange"></map>
+
+</view>

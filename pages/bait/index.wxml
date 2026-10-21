@@ -1,0 +1,33 @@
+<view class="wrap {{tc}}">
+  <view class="card accent">
+    <text class="h2">饵料与配方</text>
+    <text class="small muted">味型随季节走：冬春重腥、夏季清淡、秋季香腥、深秋初冬回腥。下方比例是通用骨架，按当地鱼情微调。</text>
+  </view>
+
+  <view class="filters">
+    <view wx:for="{{cats}}" wx:key="*this"
+          class="chip {{cat === item ? 'on' : ''}}"
+          data-c="{{item}}" bindtap="setCat">{{item}}</view>
+  </view>
+  <text class="tiny muted mb" wx:if="{{tip}}">{{tip}}</text>
+
+  <view class="card" wx:for="{{list}}" wx:key="n">
+    <view class="rh">
+      <text class="h3">{{item.n}}</text>
+      <text class="tag {{item.type}}">{{item.label}}</text>
+    </view>
+    <text class="small muted mt">{{item.desc}}</text>
+
+    <view class="mt2" wx:for="{{item.mix}}" wx:for-item="m" wx:key="nm">
+      <view class="mixrow">
+        <text class="small">{{m.nm}}</text>
+        <text class="small muted">{{m.pc}}%</text>
+      </view>
+      <view class="track"><view class="fill" style="width:{{m.pc}}%"></view></view>
+    </view>
+
+    <view class="note mt2">{{item.use}}</view>
+  </view>
+
+  <view class="empty" wx:if="{{list.length === 0}}">这个季节暂无配方</view>
+</view>

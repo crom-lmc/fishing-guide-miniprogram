@@ -1,0 +1,7 @@
+.pvbox { display: flex; justify-content: center; padding: 16rpx 0; }
+.cv {
+  border-radius: 20rpx;
+  box-shadow: 0 12rpx 40rpx rgba(0, 0, 0, .45);
+  overflow: hidden;
+}
+.plink { color: var(--a1); text-decoration: underline; }

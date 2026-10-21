@@ -1,0 +1,18 @@
+<view class="wrap {{tc}}">
+  <view class="card accent">
+    <text class="h2">钓法与操作</text>
+    <text class="small muted">台钓求精细、传统钓求灵活、路亚求主动找鱼、海钓求读流读潮。先定型，再练细节。</text>
+  </view>
+
+  <view class="acc" wx:for="{{list}}" wx:key="n">
+    <view class="acc-hd" data-i="{{index}}" bindtap="toggle">
+      <text class="num">{{index + 1}}</text>
+      <text class="acc-t">{{item.n}}</text>
+      <text class="tag">{{item.tag}}</text>
+      <text class="acc-arrow">{{item.open ? '收起' : '展开'}}</text>
+    </view>
+    <view class="acc-bd" wx:if="{{item.open}}">
+      <rich-text nodes="{{item.nodes}}"></rich-text>
+    </view>
+  </view>
+</view>

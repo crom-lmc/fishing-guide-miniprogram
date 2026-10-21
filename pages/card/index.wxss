@@ -1,0 +1,18 @@
+/* 战绩卡片 */
+.cvbox {
+  display: flex;
+  justify-content: center;
+  padding: 8rpx 0;
+}
+
+/* 画布宽度固定，高度由 js 按有无备注动态给（style 里绑 cvH） */
+.cv {
+  width: 640rpx;
+  border-radius: 20rpx;
+  overflow: hidden;
+}
+
+.ctr {
+  display: block;
+  text-align: center;
+}

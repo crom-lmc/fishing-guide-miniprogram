@@ -1,0 +1,69 @@
+<view class="wrap {{tc}}" wx:if="{{f}}">
+
+  <!-- 顶部通栏配图；没图或加载失败时退回原来的首字头像 -->
+  <view class="fhero" wx:if="{{src && !imgErr}}">
+    <image class="fheroimg" src="{{src}}" mode="aspectFit" binderror="onImgErr"></image>
+  </view>
+
+  <view class="card accent">
+    <view class="hd">
+      <view class="av" wx:if="{{!src || imgErr}}" style="background:linear-gradient(135deg,{{f.c}},{{f.c}}bb)">{{f.n[0]}}</view>
+      <view class="hdb">
+        <text class="h2">{{f.n}}</text>
+        <text class="small muted">{{f.al}}</text>
+        <view class="mt">
+          <text class="tag">{{f.layer}}</text>
+          <text class="tag {{f.w === '海水' ? 'b' : 'g'}}">{{f.w}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="kv">
+      <text class="k">适温</text><text class="v">{{f.temp}}</text>
+    </view>
+    <view class="kv">
+      <text class="k">季节</text><text class="v">{{f.season}}</text>
+    </view>
+    <view class="kv">
+      <text class="k">栖息</text><text class="v">{{f.habitat}}</text>
+    </view>
+  </view>
+
+  <view class="card">
+    <text class="h3">推荐饵料</text>
+    <view class="mt">
+      <text class="tag w" wx:for="{{f.baits}}" wx:key="*this">{{item}}</text>
+    </view>
+  </view>
+
+  <view class="card">
+    <text class="h3">适用钓法</text>
+    <view class="mt">
+      <view class="mrow" wx:for="{{f.methods}}" wx:key="t">
+        <text class="tag {{item.k === '路亚' ? 'c' : (item.k === '海钓' ? 'b' : '')}}">{{item.k}}</text>
+        <text class="small">{{item.t}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <text class="h3">线组配置</text>
+    <view class="mt"><text class="tag b">{{f.rig}}</text></view>
+    <view class="hr"></view>
+    <text class="h3">漂相 / 中鱼信号</text>
+    <text class="small muted mt">{{f.du}}</text>
+  </view>
+
+  <view class="card">
+    <text class="h3">实战要点</text>
+    <view class="note mt">{{f.tips}}</view>
+  </view>
+
+  <view class="btn-row">
+    <view class="btn ghost" bindtap="goBait">看饵料配方</view>
+    <view class="btn" bindtap="goLog">记一笔渔获</view>
+  </view>
+
+</view>

@@ -1,0 +1,82 @@
+<view class="wrap {{tc}}" wx:if="{{spot}}">
+
+  <map class="minimap" latitude="{{spot.lat}}" longitude="{{spot.lng}}"
+       markers="{{markers}}" scale="15" show-location></map>
+
+  <view class="card mt">
+    <text class="h2">{{spot.name}}</text>
+    <text class="small muted" wx:if="{{spot.addr}}">{{spot.addr}}</text>
+    <view class="ops mt">
+      <text class="btn ghost sm" bindtap="openAmap">在高德地图打开</text>
+      <button class="sbtn" hover-class="none" open-type="share">分享给钓友</button>
+    </view>
+  </view>
+
+  <!-- 标签 -->
+  <view class="card">
+    <view class="cardhd">
+      <text class="h2">钓点标签</text>
+      <text class="tiny muted">已选 {{tags.length}}</text>
+    </view>
+    <text class="small muted">点一下即选中；同一行里灰蓝的是「单选」（互斥），可多选的会累积。以后能按标签筛钓点。</text>
+
+    <view class="hr"></view>
+
+    <view class="tg-group" wx:for="{{groups}}" wx:key="k">
+      <view class="tg-hd">
+        <text class="tg-n">{{item.n}}</text>
+        <text class="tiny muted" wx:if="{{!item.multi}}">单选</text>
+      </view>
+      <view class="chips">
+        <text class="chip sm {{o.on ? 'on' : ''}}"
+              wx:for="{{item.opts}}" wx:for-item="o" wx:key="v"
+              data-g="{{item.k}}" data-v="{{o.v}}" bindtap="tapTag">{{o.v}}</text>
+        <text class="tiny muted" wx:if="{{item.opts.length === 0}}">暂无</text>
+      </view>
+    </view>
+
+    <view class="custom-row mt">
+      <input class="cipt" value="{{custom}}" placeholder="自定义标签，最多 8 字"
+             maxlength="8" bindinput="inputCustom" />
+      <text class="btn ghost sm" bindtap="addCustom">添加</text>
+    </view>
+  </view>
+
+  <!-- 照片墙 -->
+  <view class="card">
+    <view class="cardhd">
+      <text class="h2">照片墙</text>
+      <text class="tiny muted">{{photos.length}} / 9</text>
+    </view>
+    <text class="small muted">记下钓位实景、水深参照与出入口。照片存本机，不会上传；长按可删除。</text>
+
+    <view class="wall mt">
+      <view class="cell" wx:for="{{photos}}" wx:key="*this">
+        <image class="pimg" src="{{item}}" mode="aspectFill"
+               data-i="{{index}}" bindtap="previewPhoto" bindlongpress="delPhoto"></image>
+      </view>
+      <view class="cell add" wx:if="{{photos.length < 9}}" bindtap="addPhoto">
+        <text class="plus">＋</text>
+        <text class="tiny muted">加照片</text>
+      </view>
+    </view>
+    <text class="tiny muted mt" wx:if="{{photos.length === 0}}">还没有照片。拍一张典型的钓位，下次来一眼就能认。</text>
+  </view>
+
+  <!-- 备注 -->
+  <view class="card">
+    <text class="h2">钓点备注</text>
+    <textarea class="ta" value="{{note}}" maxlength="300" placeholder="例如：南岸第三棵树下出鱼好；周末人多要早到；从西门进，土路慢行。"
+              bindinput="inputNote" bindblur="saveNote"></textarea>
+    <view class="tiny muted">{{note.length}} / 300</view>
+  </view>
+
+  <view class="btn-row mt2">
+    <view class="btn ghost" bindtap="saveNote">保存</view>
+    <view class="btn" bindtap="goPoster">🎴 生成分享海报</view>
+  </view>
+
+  <view class="card mt2">
+    <text class="tiny muted">出钓前请自行确认该处是否允许垂钓；收费钓场请事先征得同意并缴费。</text>
+  </view>
+</view>

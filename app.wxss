@@ -1,0 +1,593 @@
+/* 钓鱼指南 · 全局样式（暗色主题，沿用 Web 版配色） */
+page {
+  --bg: #12141C;
+  --card: #171A23;
+  --card2: #1D212C;
+  --line: #262B38;
+  --tx: #E6EAF2;
+  --muted: #8A93A6;
+  --good: #34D399;
+  --warn: #FBBF24;
+  --bad: #F87171;
+  --a1: #7E9BFA;
+  --a2: #43C4BF;
+
+  background: var(--bg);
+  color: var(--tx);
+  font-size: 28rpx;
+  line-height: 1.6;
+}
+
+/* color 必须在 .wrap 上再声明一次：page 的 var(--tx) 在 page 层就已求值，
+   子元素继承的是算好的颜色，不会跟着 .wrap.light 的变量重写；这里重新用 var 才会随主题变 */
+/* background 同理：page{background:var(--bg)} 也是按暗色求值死的，
+   白天模式下整页底色不会跟着变（只剩卡片是白的，卡片之间的缝隙仍是深色）。
+   所以把底色铺到 .wrap 上，并用 min-height 撑满视口。 */
+.wrap {
+  padding: 24rpx 24rpx 60rpx;
+  color: var(--tx);
+  background: var(--bg);
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+/* ===== 白天模式 =====
+   变量挂在 .wrap 上向下继承；窗口背景/导航栏/tabBar 由 utils/theme.js 调框架 API 改 */
+.wrap.light {
+  --bg: #F4F6FA;
+  --card: #FFFFFF;
+  --card2: #EFF2F8;
+  --line: #E2E7F0;
+  --tx: #1B2130;
+  --muted: #64708A;
+  /* 白天模式下把强调色压暗，否则浅底上是浅字、对比度不够 */
+  --good: #12A67A;
+  --warn: #B87A05;
+  --bad: #D9534F;
+  --a1: #4F74E8;
+  --a2: #17A29B;
+}
+/* 几处写死颜色的补充：这些原本是「暗底上的浅灰字」，白天要换成深灰才有对比度 */
+.wrap.light .note { color: #3C465C; }
+.wrap.light rich-text { color: #3C465C; }
+.wrap.light .muted2 { color: #8A93A6; }
+.wrap.light .li { color: #3C465C; }
+.wrap.light .ph { color: #9AA4B8; }
+.wrap.light .card.accent { border-color: rgba(79, 116, 232, .28); }
+.wrap.light .chip.on { color: #FFFFFF; }
+
+/* —— 白天模式的层次与对比度补强 ——
+   白底上「白色卡片 + 1rpx 浅灰边框」几乎看不出边界，靠一层极淡的投影把卡片托起来 */
+.wrap.light .card {
+  box-shadow: 0 2rpx 10rpx rgba(23, 32, 53, .05), 0 1rpx 2rpx rgba(23, 32, 53, .04);
+}
+.wrap.light .card.accent {
+  background:
+    linear-gradient(135deg, rgba(79,116,232,.10), rgba(23,162,155,.07)),
+    #FFFFFF;
+}
+.wrap.light .card.danger {
+  background: linear-gradient(rgba(217,83,79,.07), rgba(217,83,79,.07)), #FFFFFF;
+  border-color: rgba(217,83,79,.28);
+}
+.wrap.light .card.danger .h3 { color: var(--bad); }
+/* #60A5FA 在白底上偏浅，蓝标签换成更深一档 */
+.wrap.light .tag.b { color: #2E6BD6; }
+/* 气压曲线图例的淡紫在白底上看不清 */
+.wrap.light .lg .dot.line { background: #7C5CE0; }
+/* 未勾选的复选框：浅灰边框在白底上等于隐形 */
+.wrap.light .ck .box { border-color: #C7D0E0; }
+/* 幽灵按钮在白底上太淡，补一层白底 + 略深的描边 */
+.wrap.light .btn.ghost { background: #FFFFFF; border-color: #D3DAE7; }
+
+.card {
+  background: var(--card);
+  border: 1rpx solid var(--line);
+  border-radius: 20rpx;
+  padding: 28rpx;
+  margin-bottom: 24rpx;
+  position: relative;   /* 供卡片右上角的折叠箭头绝对定位 */
+}
+
+.card.accent {
+  /* 渐变是半透明的，必须自己垫一层卡片底色 —— 否则叠在页面底色上，
+     白天模式下会变成一块深色（页面底色没跟着变时尤其明显） */
+  background:
+    linear-gradient(135deg, rgba(126,155,250,.14), rgba(67,196,191,.10)),
+    var(--card);
+  border-color: rgba(126,155,250,.28);
+}
+
+.cardhd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8rpx; }
+.cardhd .h2 { margin-bottom: 0; }
+.btn.dis { opacity: .5; }
+.geo { display: block; color: var(--a2); margin-top: 10rpx; line-height: 1.5; }
+
+/* 定位提示行：左侧提示文案 + 右侧「地图选点」校正入口 */
+.georow { display: flex; align-items: flex-start; gap: 12rpx; margin-top: 10rpx; }
+.georow .geo { flex: 1; min-width: 0; margin-top: 0; }
+.georow .plink { flex-shrink: 0; color: var(--a1); text-decoration: underline; line-height: 1.5; }
+
+/* 折叠行：自动填入后参数收起，只留一行摘要；点击展开才改 */
+.foldrow {
+  display: flex; align-items: center; gap: 12rpx;
+  padding: 18rpx 20rpx; margin-top: 12rpx;
+  background: var(--card2); border-radius: 12rpx;
+}
+.foldrow .foldb { flex: 1; min-width: 0; }
+.foldrow .foldb .small { display: block; margin-top: 4rpx; line-height: 1.5; }
+.foldar {
+  flex-shrink: 0; color: var(--muted); font-size: 30rpx; line-height: 1;
+  transition: transform .18s ease;
+}
+.foldar.on { transform: rotate(90deg); }
+/* 卡片右上角的折叠箭头：padding 用来放大点击热区，不改变视觉位置 */
+.foldar.abs { position: absolute; top: 18rpx; right: 18rpx; padding: 14rpx 16rpx; }
+/* 折叠态底部的展开提示（结果卡用，因为它的分数区没有标题行可挂箭头） */
+.foldtip { display: block; text-align: center; font-size: 22rpx; color: var(--muted); margin-top: 16rpx; }
+/* 今日时机 · 折叠态的一行摘要 */
+.sunsum { display: flex; align-items: center; flex-wrap: wrap; gap: 6rpx; margin-top: 8rpx; }
+.sunsum .sundiv { color: var(--line); font-size: 22rpx; }
+.hdend { display: flex; align-items: center; gap: 14rpx; flex-shrink: 0; }
+
+.h2 { font-size: 32rpx; font-weight: 600; margin-bottom: 8rpx; display: block; }
+.h3 { font-size: 28rpx; font-weight: 600; margin-bottom: 6rpx; display: block; }
+.muted { color: var(--muted); }
+.small { font-size: 24rpx; }
+.tiny { font-size: 22rpx; }
+.center { text-align: center; }
+.mt { margin-top: 16rpx; }
+.mt2 { margin-top: 28rpx; }
+.mb { margin-bottom: 16rpx; }
+.hr { height: 1rpx; background: var(--line); margin: 24rpx 0; }
+
+/* 标签 */
+.tag {
+  display: inline-block;
+  font-size: 22rpx;
+  padding: 4rpx 14rpx;
+  border-radius: 999rpx;
+  background: rgba(126,155,250,.16);
+  color: var(--a1);
+  margin: 0 10rpx 10rpx 0;
+}
+.tag.g { background: rgba(52,211,153,.14); color: var(--good); }
+.tag.b { background: rgba(96,165,250,.14); color: #60A5FA; }
+.tag.w { background: rgba(251,191,36,.14); color: var(--warn); }
+.tag.c { background: rgba(67,196,191,.14); color: var(--a2); }
+
+/* 按钮 */
+.btn {
+  background: linear-gradient(135deg, var(--a1), var(--a2));
+  color: #0E1119;
+  font-size: 28rpx;
+  font-weight: 600;
+  border-radius: 14rpx;
+  padding: 18rpx 0;
+  text-align: center;
+  line-height: 1.4;
+}
+.btn.ghost {
+  background: transparent;
+  border: 1rpx solid var(--line);
+  color: var(--tx);
+  font-weight: 400;
+}
+.btn.sm { font-size: 24rpx; padding: 12rpx 24rpx; border-radius: 999rpx; display: inline-block; }
+.btn-row { display: flex; gap: 16rpx; }
+.btn-row > .btn { flex: 1; }
+
+/* 筛选条 */
+.filters { display: flex; flex-wrap: wrap; gap: 12rpx; margin-bottom: 24rpx; }
+.chip {
+  font-size: 24rpx;
+  padding: 10rpx 24rpx;
+  border-radius: 999rpx;
+  border: 1rpx solid var(--line);
+  color: var(--muted);
+  background: var(--card);
+}
+.chip.on {
+  background: linear-gradient(135deg, var(--a1), var(--a2));
+  color: #0E1119;
+  border-color: transparent;
+  font-weight: 600;
+}
+
+/* 列表项 */
+.item {
+  display: flex;
+  align-items: center;
+  background: var(--card);
+  border: 1rpx solid var(--line);
+  border-radius: 18rpx;
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+}
+.item .av {
+  width: 72rpx; height: 72rpx;
+  border-radius: 18rpx;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32rpx; font-weight: 600; color: #fff;
+  margin-right: 20rpx; flex-shrink: 0;
+}
+.item .body { flex: 1; min-width: 0; }
+.item .nm { font-size: 30rpx; font-weight: 600; }
+.item .sub { font-size: 23rpx; color: var(--muted); margin-top: 4rpx; }
+.item .arrow { color: var(--muted); font-size: 26rpx; }
+
+/* 鱼种图鉴 · 列表右侧圆形配图 */
+.item .fthumb {
+  width: 92rpx; height: 92rpx;
+  border-radius: 50%;
+  flex-shrink: 0; margin-left: 18rpx;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+  background: var(--card2);
+}
+.item .fthumb .fimg { width: 84%; height: 84%; }
+.item .fthumb .fchar { font-size: 32rpx; font-weight: 600; color: var(--tx); }
+
+/* 鱼种图鉴 · 详情页顶部通栏大图 */
+.fhero {
+  height: 300rpx;
+  border-radius: 20rpx;
+  margin-bottom: 24rpx;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, rgba(126, 155, 250, .14), rgba(67, 196, 191, .10)), var(--card);
+  border: 1rpx solid var(--line);
+}
+.fheroimg { width: 88%; height: 88%; }
+
+/* 表单行 */
+.field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid var(--line);
+}
+.field:last-child { border-bottom: none; }
+.field .lb { font-size: 27rpx; color: var(--muted); flex-shrink: 0; }
+.field .val { font-size: 27rpx; color: var(--tx); }
+
+.opts { display: flex; flex-wrap: wrap; gap: 12rpx; justify-content: flex-end; }
+.opt {
+  font-size: 24rpx; padding: 10rpx 20rpx; border-radius: 12rpx;
+  background: var(--card2); color: var(--muted); border: 1rpx solid transparent;
+}
+.opt.on { background: rgba(67,196,191,.16); color: var(--a2); border-color: rgba(67,196,191,.4); }
+
+slider { flex: 1; margin: 0; }
+
+/* 分数环 */
+.score-wrap { display: flex; align-items: center; justify-content: center; padding: 20rpx 0; }
+.score-num { font-size: 96rpx; font-weight: 700; line-height: 1; }
+.score-unit { font-size: 24rpx; color: var(--muted); margin-left: 8rpx; }
+
+/* 因素条 */
+.bar { display: flex; align-items: center; margin-bottom: 14rpx; }
+.bar .nm { width: 80rpx; font-size: 24rpx; color: var(--muted); }
+.bar .track { flex: 1; height: 12rpx; background: var(--card2); border-radius: 999rpx; overflow: hidden; margin: 0 16rpx; }
+.bar .fill { height: 100%; border-radius: 999rpx; }
+.bar .sc { width: 60rpx; font-size: 24rpx; text-align: right; }
+
+/* 建议网格 */
+.grid2 { display: flex; flex-wrap: wrap; }
+.grid2 > view { width: 50%; box-sizing: border-box; padding-right: 16rpx; margin-bottom: 20rpx; }
+.grid2 > view:nth-child(2n) { padding-right: 0; padding-left: 16rpx; }
+
+.note {
+  background: var(--card2);
+  border-left: 4rpx solid var(--a2);
+  border-radius: 8rpx;
+  padding: 18rpx 20rpx;
+  font-size: 25rpx;
+  color: #C9D2E3;
+}
+
+.note.warn { border-left-color: var(--warn); }
+
+.empty { text-align: center; color: var(--muted); font-size: 25rpx; padding: 60rpx 0; }
+
+/* 统计块 */
+.stats { display: flex; flex-wrap: wrap; }
+.stat { width: 33.33%; text-align: center; padding: 16rpx 0; }
+.stat .v { font-size: 40rpx; font-weight: 700; }
+.stat .k { font-size: 22rpx; color: var(--muted); }
+/* 「我的」页是 4 项，用 33.33% 会 3+1 折行、第二行只剩一个孤零零的数字，
+   这里收紧到一行 4 列（标签字号同步下调，避免「累计时长（h）」折字） */
+.stats4 .stat { width: 25%; }
+.stats4 .stat .v { font-size: 38rpx; }
+.stats4 .stat .k { font-size: 20rpx; line-height: 1.4; }
+
+rich-text { font-size: 26rpx; color: #C9D2E3; line-height: 1.75; }
+
+/* 搜索框 */
+.search {
+  background: var(--card2);
+  border-radius: 14rpx;
+  padding: 18rpx 24rpx;
+  font-size: 27rpx;
+  color: var(--tx);
+}
+.ph { color: #5C6478; }
+
+/* 鱼种详情头部 */
+.hd { display: flex; align-items: flex-start; }
+.hd .av {
+  width: 96rpx; height: 96rpx; border-radius: 22rpx;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 40rpx; font-weight: 700; color: #fff; margin-right: 24rpx; flex-shrink: 0;
+}
+.hdb { flex: 1; min-width: 0; }
+
+/* 通用右箭头（钓点卡片、入口行都用它；.entry 下另有左边距微调） */
+.arrow { color: var(--muted); font-size: 28rpx; line-height: 1; flex-shrink: 0; }
+
+/* 键值行 */
+.kv { display: flex; padding: 12rpx 0; }
+.kv .k { width: 120rpx; color: var(--muted); font-size: 26rpx; flex-shrink: 0; }
+.kv .v { flex: 1; font-size: 26rpx; }
+
+.mrow { display: flex; align-items: flex-start; margin-bottom: 12rpx; }
+.mrow .small { flex: 1; }
+.mrow .tag { margin-right: 12rpx; flex-shrink: 0; }
+
+/* 手风琴（钓法） */
+.acc {
+  background: var(--card);
+  border: 1rpx solid var(--line);
+  border-radius: 18rpx;
+  margin-bottom: 16rpx;
+  overflow: hidden;
+}
+.acc-hd { display: flex; align-items: center; padding: 26rpx 28rpx; }
+.acc-hd .num {
+  width: 40rpx; height: 40rpx; border-radius: 50%;
+  background: linear-gradient(135deg, var(--a1), var(--a2));
+  color: #0E1119; font-size: 22rpx; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; margin-right: 16rpx; flex-shrink: 0;
+}
+.acc-t { font-size: 29rpx; font-weight: 600; flex: 1; }
+.acc-hd .tag { margin: 0 12rpx 0 0; }
+.acc-arrow { font-size: 23rpx; color: var(--muted); }
+.acc-bd { padding: 0 28rpx 28rpx; border-top: 1rpx solid var(--line); padding-top: 24rpx; }
+
+/* 饵料 */
+.rh { display: flex; align-items: center; }
+.rh .tag { margin-left: 12rpx; }
+.mixrow { display: flex; justify-content: space-between; margin-bottom: 6rpx; }
+.track { height: 12rpx; background: var(--card2); border-radius: 999rpx; overflow: hidden; }
+.track .fill { height: 100%; background: linear-gradient(90deg, var(--a1), var(--a2)); border-radius: 999rpx; }
+
+/* 我的入口 */
+.entry { display: flex; align-items: center; padding: 24rpx 0; border-bottom: 1rpx solid var(--line); }
+.entry:last-child { border-bottom: none; }
+/* 图标列必须定宽 + 居中：emoji 字形本身宽度不一（📍/🎒/⚠️ 差异明显），
+   不定宽会导致每行文字起始位置左右跳动，看起来就是「没对齐」。
+   外面加一层圆角色块，让「图标 + 标题 + 副标题」在两种主题下都更像一条规整的列表项 */
+.entry .ico {
+  width: 60rpx;
+  height: 60rpx;
+  flex-shrink: 0;
+  margin-right: 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32rpx;
+  line-height: 1;
+  background: var(--card2);
+  border-radius: 16rpx;
+}
+.entry .eb { flex: 1; min-width: 0; }
+.entry .eb .nm { font-size: 29rpx; display: block; line-height: 1.4; }
+/* 副标题统一成块级、固定行高与间距，四行行高才不会一高一低 */
+.entry .eb .small {
+  display: block;
+  font-size: 23rpx;
+  line-height: 1.4;
+  margin-top: 4rpx;
+}
+.entry .arrow { color: var(--muted); font-size: 28rpx; line-height: 1; flex-shrink: 0; margin-left: 12rpx; }
+
+/* 外观开关：整行都可点，这里只做一个视觉反馈（不用 switch 组件，避免系统样式打架） */
+.tk {
+  width: 78rpx;
+  height: 44rpx;
+  border-radius: 999rpx;
+  background: var(--card2);
+  border: 1rpx solid var(--line);
+  position: relative;
+  flex-shrink: 0;
+  margin-left: 12rpx;
+  transition: background .18s ease, border-color .18s ease;
+}
+.tk .knob {
+  position: absolute;
+  top: 5rpx;
+  left: 5rpx;
+  width: 32rpx;
+  height: 32rpx;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: left .18s ease, background .18s ease;
+}
+.tk.on { background: rgba(67, 196, 191, .18); border-color: rgba(67, 196, 191, .45); }
+.tk.on .knob { left: 39rpx; background: var(--a2); }
+
+/* 表单 */
+.ipt { flex: 1; text-align: right; font-size: 27rpx; color: var(--tx); }
+.chips { display: flex; flex-wrap: wrap; gap: 10rpx; padding: 8rpx 0 16rpx; }
+.chip.sm { font-size: 21rpx; padding: 6rpx 16rpx; }
+
+.photo { width: 100%; border-radius: 14rpx; margin-top: 16rpx; }
+
+/* 逐时适钓图表（首页未来 24 小时） */
+.chart { margin-top: 20rpx; }
+.hbars { position: relative; display: flex; align-items: flex-end; height: 260rpx; }
+.hcol { flex: 1 1 0; height: 100%; display: flex; align-items: flex-end; padding: 0 1rpx; box-sizing: border-box; }
+.hbar { width: 100%; border-radius: 4rpx 4rpx 0 0; min-height: 4rpx; }
+/* 气压曲线叠在柱子上层：pointer-events:none 保证柱子仍可点 */
+.pcurve { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+.hticks { position: relative; height: 36rpx; margin-top: 8rpx; }
+.htick { position: absolute; top: 0; transform: translateX(-50%); font-size: 20rpx; color: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; align-items: center; gap: 12rpx 24rpx; margin-top: 20rpx; }
+.lg { display: flex; align-items: center; font-size: 21rpx; color: var(--muted); }
+.lg .dot { width: 14rpx; height: 14rpx; border-radius: 3rpx; margin-right: 8rpx; }
+.lg .dot.line { width: 18rpx; height: 3rpx; border-radius: 2rpx; background: #C7B2FF; }
+.hsum text { display: block; line-height: 1.7; }
+
+/* 日志条目 */
+.lrow { display: flex; align-items: center; justify-content: space-between; }
+.ldate { font-size: 27rpx; font-weight: 600; }
+.del { font-size: 24rpx; color: var(--bad); }
+
+/* 钓点行内操作：分享按钮（open-type=share）+ 删除 */
+.lops { display: flex; align-items: center; flex-shrink: 0; }
+.lops .sbtn {
+  width: auto;
+  margin: 0 20rpx 0 0;
+  padding: 0 22rpx;
+  height: 46rpx;
+  line-height: 46rpx;
+  font-size: 22rpx;
+  font-weight: 400;
+  color: var(--a2);
+  background: transparent;
+  border: 1rpx solid var(--a2);
+  border-radius: 999rpx;
+  flex-shrink: 0;
+}
+.lops .sbtn::after { border: none; }
+.ops { display: flex; gap: 16rpx; }
+.ops > .btn { flex: 1; }
+
+/* 钓点卡片：定宽图标列 + 文本列
+   长钓点名换行后与首行文字左对齐（不再缩到 emoji 下面），地址/按钮缩进到同一文本列 */
+.spot .lrow { align-items: flex-start; }
+.spot .sico { width: 40rpx; flex-shrink: 0; font-size: 26rpx; line-height: 1.6; }
+.spot .snm { flex: 1; min-width: 0; }
+.spot .sind { margin-left: 40rpx; }
+
+/* 钓点「📍 定位」按钮（渔获日志新增记录） */
+.locbtn {
+  flex-shrink: 0;
+  margin-left: 16rpx;
+  font-size: 22rpx;
+  line-height: 1;
+  padding: 12rpx 16rpx;
+  border-radius: 12rpx;
+  background: rgba(67, 196, 191, .14);
+  color: var(--a2);
+  border: 1rpx solid rgba(67, 196, 191, .35);
+}
+
+/* 装备勾选 */
+.sechd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12rpx; }
+.ck { display: flex; align-items: center; padding: 18rpx 0; border-bottom: 1rpx solid var(--line); }
+.ck:last-child { border-bottom: none; }
+.ck .box {
+  width: 36rpx; height: 36rpx; border-radius: 8rpx;
+  border: 2rpx solid var(--line); margin-right: 18rpx;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22rpx; color: #0E1119; flex-shrink: 0;
+}
+.ck .box.on { background: linear-gradient(135deg, var(--a1), var(--a2)); border-color: transparent; }
+.ckb { flex: 1; min-width: 0; }
+.ckn { font-size: 27rpx; }
+.qty { font-size: 23rpx; color: var(--muted); flex-shrink: 0; margin-left: 12rpx; }
+.ckstat { display: flex; align-items: center; justify-content: space-between; }
+.btnrow { display: flex; gap: 12rpx; }
+
+/* 地图 */
+.map { width: 100%; height: 520rpx; border-radius: 20rpx; overflow: hidden; margin-bottom: 20rpx; }
+
+/* 首页精确定位用的隐藏地图：移出可视区（不能用 display:none / 0 尺寸，原生组件会不初始化），
+   保留 40rpx 实际尺寸 + 关闭点击穿透 */
+.geohide {
+  position: fixed;
+  left: -2000rpx;
+  top: -2000rpx;
+  width: 40rpx;
+  height: 40rpx;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 列表符号 */
+.li {
+  font-size: 26rpx;
+  color: #C9D2E3;
+  padding: 10rpx 0 10rpx 28rpx;
+  position: relative;
+  line-height: 1.7;
+}
+.li::before {
+  content: "";
+  position: absolute;
+  left: 8rpx; top: 30rpx;
+  width: 8rpx; height: 8rpx; border-radius: 50%;
+  background: var(--a2);
+}
+
+.card.danger {
+  background: linear-gradient(rgba(248,113,113,.10), rgba(248,113,113,.10)), var(--card);
+  border-color: rgba(248,113,113,.32);
+}
+.card.danger .h3 { color: #FCA5A5; }
+
+/* 今日时机（首页）：日出日落 / 黄金窗口 / 月相 / 推荐目标鱼 */
+.tag2 {
+  font-size: 22rpx;
+  padding: 4rpx 16rpx;
+  border-radius: 999rpx;
+  border: 1rpx solid var(--line);
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.tag2.on { background: rgba(52, 211, 153, .14); color: var(--good); border-color: rgba(52, 211, 153, .35); }
+
+.sunrow { display: flex; }
+.suncol { flex: 1; text-align: center; }
+.suncol .tiny { display: block; margin-bottom: 6rpx; }
+.sunt { display: block; font-size: 29rpx; font-weight: 600; line-height: 1.35; }
+.suncol.hi .sunt { font-size: 31rpx; color: var(--warn); }
+
+.goldrow { display: flex; gap: 16rpx; }
+.gold { flex: 1; background: var(--card2); border-radius: 14rpx; padding: 16rpx 18rpx; }
+.gold .tiny { display: block; }
+.gold .gt { display: block; font-size: 27rpx; font-weight: 600; color: var(--a2); margin-top: 4rpx; }
+
+.moonico { font-size: 56rpx; line-height: 1; margin-right: 24rpx; flex-shrink: 0; }
+.moonb { flex: 1; min-width: 0; }
+.moonb .h3 { margin-bottom: 2rpx; }
+
+.muted2 { color: #6B7488; }
+
+/* 目标鱼行：定宽头像列 + 文本列，长名字换行后与首行左对齐 */
+.tg { display: flex; align-items: center; padding: 20rpx 0; border-bottom: 1rpx solid var(--line); }
+.tg:last-of-type { border-bottom: none; }
+.tav {
+  width: 64rpx; height: 64rpx; border-radius: 18rpx;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 30rpx; font-weight: 700; color: #0E1119;
+  margin-right: 20rpx; flex-shrink: 0;
+}
+.tbody { flex: 1; min-width: 0; }
+.tgnm { display: flex; align-items: baseline; justify-content: space-between; gap: 16rpx; }
+.tgnm .nm { font-size: 29rpx; font-weight: 600; }
+.tgsc { font-size: 30rpx; font-weight: 700; flex-shrink: 0; }
+.tbody .small, .tbody .tiny { display: block; line-height: 1.5; }
+.tgar { color: var(--muted); font-size: 32rpx; margin-left: 12rpx; flex-shrink: 0; }
+
+/* 简易表格 */
+.tbl { border: 1rpx solid var(--line); border-radius: 12rpx; overflow: hidden; }
+.tbl .tr { display: flex; }
+.tbl .th { background: var(--card2); }
+.tbl .th .td { color: var(--muted); font-weight: 600; }
+.tbl .td {
+  flex: 1; font-size: 22rpx; padding: 14rpx 12rpx;
+  border-bottom: 1rpx solid var(--line); line-height: 1.5;
+}
+.tbl .tr:last-child .td { border-bottom: none; }

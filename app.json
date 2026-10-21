@@ -1,0 +1,77 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/fish/list",
+    "pages/fish/detail",
+    "pages/method/index",
+    "pages/bait/index",
+    "pages/mine/index",
+    "pages/log/index",
+    "pages/gear/index",
+    "pages/map/index",
+    "pages/nearby/index",
+    "pages/card/index",
+    "pages/sync/index",
+    "pages/spot/index",
+    "pages/poster/index",
+    "pages/stats/index",
+    "pages/rules/index"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#12141C",
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "钓鱼指南",
+    "backgroundColor": "#12141C",
+    "backgroundTextStyle": "light",
+    "enablePullDownRefresh": false
+  },
+  "tabBar": {
+    "color": "#8A93A6",
+    "selectedColor": "#17A29B",
+    "backgroundColor": "#171A23",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "出钓指数",
+        "iconPath": "images/tab-index.png",
+        "selectedIconPath": "images/tab-index-on.png"
+      },
+      {
+        "pagePath": "pages/fish/list",
+        "text": "鱼种图鉴",
+        "iconPath": "images/tab-fish.png",
+        "selectedIconPath": "images/tab-fish-on.png"
+      },
+      {
+        "pagePath": "pages/method/index",
+        "text": "钓法",
+        "iconPath": "images/tab-method.png",
+        "selectedIconPath": "images/tab-method-on.png"
+      },
+      {
+        "pagePath": "pages/bait/index",
+        "text": "饵料",
+        "iconPath": "images/tab-bait.png",
+        "selectedIconPath": "images/tab-bait-on.png"
+      },
+      {
+        "pagePath": "pages/mine/index",
+        "text": "我的",
+        "iconPath": "images/tab-mine.png",
+        "selectedIconPath": "images/tab-mine-on.png"
+      }
+    ]
+  },
+  "permission": {
+    "scope.userFuzzyLocation": {
+      "desc": "用于获取当地天气以计算适钓指数，并记录钓点位置"
+    },
+    "scope.userLocation": {
+      "desc": "用于在地图上显示你的位置，并在地图上选择钓点位置"
+    }
+  },
+  "requiredPrivateInfos": ["getFuzzyLocation", "chooseLocation"],
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

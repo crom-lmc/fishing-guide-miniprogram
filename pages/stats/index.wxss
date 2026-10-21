@@ -1,0 +1,12 @@
+.cv { width: 100%; margin-top: 20rpx; display: block; }
+
+.srow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid var(--line);
+}
+.srow:last-child { border-bottom: none; }
+.srow .sn { flex: 1; min-width: 0; font-size: 26rpx; }
+.srow .sc { flex-shrink: 0; margin-left: 20rpx; font-size: 24rpx; color: var(--a2); }

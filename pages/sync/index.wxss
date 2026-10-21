@@ -1,0 +1,10 @@
+/* 云同步页 */
+.kv {
+  display: flex;
+  align-items: baseline;
+  padding: 12rpx 0;
+  border-bottom: 1rpx solid var(--line);
+}
+.kv:last-child { border-bottom: none; }
+.kv .k { width: 120rpx; flex-shrink: 0; color: var(--muted); font-size: 25rpx; }
+.kv .v { flex: 1; min-width: 0; font-size: 27rpx; }
