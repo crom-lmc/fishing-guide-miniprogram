@@ -3,8 +3,8 @@
   "packOptions": {
     "ignore": [
       {
-        "type": "folder",
-        "value": "tools"
+        "value": "tools",
+        "type": "folder"
       }
     ],
     "include": []

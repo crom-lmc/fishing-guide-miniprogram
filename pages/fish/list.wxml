@@ -1,7 +1,21 @@
 <view class="wrap {{tc}}">
-  <view class="card">
-    <input class="search" placeholder="搜鱼名或别名，如 草鱼 / 鲫 / 翘嘴" placeholder-class="ph"
-           value="{{kw}}" bindinput="onSearch" />
+  <!-- 吸顶区：滚动时进度条 + 搜索框固定在顶部 -->
+  <view class="fstick">
+    <!-- 图鉴解锁进度：解锁数来自渔获日志（钓到过即解锁） -->
+    <view class="card fprog">
+      <view class="fprog-hd">
+        <text class="fprog-title">图鉴解锁</text>
+        <text class="fprog-num">{{prog.got}}/{{prog.total}}</text>
+      </view>
+      <view class="fprog-bar">
+        <view class="fprog-fill" style="width: {{prog.pct}}%"></view>
+      </view>
+    </view>
+
+    <view class="card">
+      <input class="search" placeholder="搜鱼名或别名，如 草鱼 / 鲫 / 翘嘴" placeholder-class="ph"
+             value="{{kw}}" bindinput="onSearch" />
+    </view>
   </view>
 
   <view class="filters">
@@ -17,19 +31,25 @@
 
   <view class="item" wx:for="{{list}}" wx:key="n" data-n="{{item.n}}" bindtap="open">
     <view class="body">
-      <view class="nm">{{item.n}}</view>
+      <view class="nm-row">
+        <text class="nm">{{item.n}}</text>
+        <text class="nm-catch" wx:if="{{item._n > 0}}">已钓 {{item._n}} 次</text>
+      </view>
       <view class="sub">{{item.al}}</view>
       <view class="mt">
         <text class="tag">{{item.layer}}</text>
         <text class="tag {{item.w === '海水' ? 'b' : 'g'}}">{{item.w}}</text>
       </view>
     </view>
-    <!-- 右侧圆形配图：一屏能多放一两条，鱼形缩略后仍可分辨体型 -->
-    <view class="fthumb">
-      <image class="fimg" src="{{item._src}}" mode="aspectFit" lazy-load
-             wx:if="{{item._src && !item._broken}}"
-             binderror="onImgErr" data-i="{{index}}"></image>
-      <text class="fchar" wx:else>{{item.n[0]}}</text>
+    <!-- 右侧：鱼形配图 + 解锁状态上下叠放；未解锁置灰 -->
+    <view class="fside">
+      <view class="fthumb {{item._locked ? 'locked' : ''}}">
+        <image class="fimg" src="{{item._src}}" mode="aspectFit" lazy-load
+               wx:if="{{item._src && !item._broken}}"
+               binderror="onImgErr" data-i="{{index}}"></image>
+        <text class="fchar" wx:else>{{item.n[0]}}</text>
+      </view>
+      <text class="upill {{item._locked ? 'off' : 'on'}}">{{item._locked ? '未解锁' : '已解锁'}}</text>
     </view>
   </view>
 

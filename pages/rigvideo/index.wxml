@@ -1,0 +1,10 @@
+<view class="wrap {{tc}}">
+  <view class="card" wx:if="{{v}}">
+    <video class="rv-v" src="{{v.src}}" poster="{{v.poster}}" controls autoplay show-center-play-btn enable-progress-gesture></video>
+    <view class="rigv-cap mt">
+      <text class="rigv-t">{{v.title}}</text>
+      <text class="rigv-dur">{{v.dur}}</text>
+    </view>
+    <text class="rigv-desc small muted">{{v.desc}}</text>
+  </view>
+</view>

@@ -30,4 +30,27 @@
   </view>
 
   <view class="empty" wx:if="{{list.length === 0}}">这个季节暂无配方</view>
+
+  <!-- 路亚假饵速查：与季节无关，常驻展示 -->
+  <view class="card accent lure-hd">
+    <text class="h2">路亚假饵速查</text>
+    <text class="small muted">假饵不是"吃"的是"骗"的——按对象鱼所在水层选类型，按鱼活性选操控节奏。新手从亮片或铅头钩+T尾起步。</text>
+  </view>
+
+  <view class="card lure" wx:for="{{lures}}" wx:key="key">
+    <!-- 右上角假饵配图 -->
+    <view class="lthumb" wx:if="{{item._src && !item._broken}}">
+      <image class="limg" src="{{item._src}}" mode="aspectFit" lazy-load
+             binderror="onLureErr" data-i="{{index}}"></image>
+    </view>
+    <view class="rh">
+      <text class="h3">{{item.n}}</text>
+      <text class="tag {{item.lvType}}">{{item.lv}}</text>
+    </view>
+    <view class="lrow"><text class="lb">类型</text><text class="val">{{item.kind}}</text></view>
+    <view class="lrow"><text class="lb">水层</text><text class="val">{{item.layer}}</text></view>
+    <view class="lrow"><text class="lb">对象鱼</text><text class="val">{{item.fish}}</text></view>
+    <view class="lrow"><text class="lb">操控</text><text class="val">{{item.act}}</text></view>
+    <view class="note mt2">{{item.use}}</view>
+  </view>
 </view>

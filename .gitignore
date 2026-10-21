@@ -14,3 +14,8 @@ npm-debug.log*
 
 # WorkBuddy 本地工作数据（会话数据，与工程无关）
 .workbuddy/
+
+# AI 生成图原始素材（体积大，成品在 images/ 下，可随时用 tools/ 重建）
+tools/ai-fish/
+tools/ai-lure/
+tools/fish-preview/

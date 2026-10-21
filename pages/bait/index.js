@@ -1,6 +1,7 @@
 // 饵料配方
 const D = require("../../data/fishing-data.js");
 const TH = require("../../utils/theme.js");
+const IM = require("../../utils/img.js");
 
 const LABEL = { winter: "冬", spring: "春", summer: "夏", autumn: "秋", all: "通用" };
 const KEY = { "春": "spring", "夏": "summer", "秋": "autumn", "冬": "winter", "通用": "all" };
@@ -32,6 +33,13 @@ Page(TH.mix({
     this.apply(c);
   },
 
+  // 假饵配图加载失败 → 该条隐藏图片，不留白块
+  onLureErr(e) {
+    const i = Number(e.currentTarget.dataset.i);
+    if (isNaN(i)) return;
+    this.setData({ ["lures[" + i + "]._broken"]: true });
+  },
+
   apply(cat) {
     const key = KEY[cat];
     const raw = key ? D.BAITS.filter(r => r.season === key) : D.BAITS.slice();
@@ -44,9 +52,17 @@ Page(TH.mix({
       type: r.season === "winter" ? "b" : (r.season === "summer" ? "g" : ""),
       mix: r.mix.map(m => ({ nm: m[0], pc: m[1] }))
     }));
+    // 路亚假饵速查：与季节无关，始终全量展示；难度标签配色与配图地址在这算好
+    const lures = D.LURES.map(l => ({
+      n: l.n, kind: l.kind, layer: l.layer, fish: l.fish, act: l.act, use: l.use,
+      lv: l.lv,
+      lvType: l.lv.indexOf("首选") >= 0 ? "g" : (l.lv === "进阶" ? "b" : ""),
+      _src: IM.fishSrc("images/lure/" + l.key + ".png"),
+      _broken: false
+    }));
     const month = new Date().getMonth() + 1;
     const tip = (cat !== "全部" && cat === LABEL[curSeasonKey()])
       ? "已按当前月份（" + month + " 月）默认选中「" + cat + "」，点「全部」看所有配方" : "";
-    this.setData({ list: list, tip: tip });
+    this.setData({ list: list, lures: lures, tip: tip });
   }
 }));

@@ -27,6 +27,10 @@ const CLOUD_ENV = "";
 // 注意：配了远程图但图没传齐时，页面会自动退回首字头像，不会开天窗。
 const FISH_IMG_BASE = "";
 
+// 默认解锁全部图鉴鱼种（演示/看图标效果用）。
+// 设为 false 时解锁以渔获日志为准 —— 钓到过该鱼种才解锁。
+const UNLOCK_ALL = false;
+
 module.exports = {
   CLOUD_ENV: CLOUD_ENV,
   FISH_IMG_BASE: FISH_IMG_BASE,
@@ -34,5 +38,6 @@ module.exports = {
   VISION_ENABLED: VISION_ENABLED,
   VISION_MODE: VISION_MODE,
   VISION_ENDPOINT: VISION_ENDPOINT,
-  VISION_MODEL: VISION_MODEL
+  VISION_MODEL: VISION_MODEL,
+  UNLOCK_ALL: UNLOCK_ALL
 };

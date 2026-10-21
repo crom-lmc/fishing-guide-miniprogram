@@ -283,6 +283,49 @@ const BAITS = [
    use:"原则：鱼贴底就贴底慢慢跳，鱼在草里就用防挂钓组硬穿，鱼追小鱼就用快速回收做逃窜动作。颜色选择——水清用自然色，水浑用亮色。"}
 ];
 
+// 路亚假饵速查：kind=类别  layer=搜搜水层  fish=对象鱼  act=操控手法  use=使用场景  lv=上手难度
+const LURES = [
+  {n:"亮片（勺型 / 旋转）",key:"liangpian",kind:"金属",lv:"新手首选",layer:"全水层可搜，远投性好",
+   fish:"马口、白条、翘嘴、海鲈",act:"匀速回收为主，可加变速（收两下停半秒）",
+   use:"路亚入门第一颗饵，抛得远、操作零门槛。溪流钓马口用 2–5g 小亮片，大水面翘嘴用 7–15g。反光诱鱼，水浑时换金色/荧光款。"},
+  {n:"米诺（Minnow）",key:"minuo",kind:"硬饵",lv:"新手",layer:"中上层，潜水板决定下潜深度",
+   fish:"翘嘴、鲈鱼、海鲈",act:"抽停（抽两下停一秒）或匀收",
+   use:"模仿受伤小鱼，停顿瞬间最容易被咬。清晨傍晚翘嘴炸水时对准鱼群抛，效果立竿见影。选 5–10cm、浮水或缓沉款最通用。"},
+  {n:"VIB（震动沉水）",key:"vib",kind:"硬饵",lv:"进阶",layer:"全水层，沉水可数秒数深度",
+   fish:"翘嘴、鳜鱼、鲈鱼",act:"匀收感受震动，或贴底跳",
+   use:"搜索效率之王， sinking 设计能打到深水。震动强但容易挂底，礁石区/乱石区慎用。冬天翘嘴深水就靠它。"},
+  {n:"波扒（Popper 水面系）",key:"bopa",kind:"水面系",lv:"进阶",layer:"水面",
+   fish:"翘嘴、海鲈、黑鱼",act:"抽竿让头部炸水花，停顿几秒再抽",
+   use:"视觉刺激拉满，看鱼炸水面是路亚最爽的瞬间。清晨、傍晚、阴天轻度最好用；死等不如换层——水面没口就下沉搜索。"},
+  {n:"小胖子（Crank 摇摆）",key:"crank",kind:"硬饵",lv:"新手",layer:"中层，潜水板碰底",
+   fish:"鲈鱼、鳜鱼、鳡鱼",act:"匀收，让泳姿自然撞底",
+   use:"长舌板下潜深，撞底扬起泥沙能诱鱼。乱石区容易挂，用便宜款练手。浑水里选亮色+大声响的型号。"},
+  {n:"铅头钩 + T尾 / 卷尾",key:"qiantougou",kind:"软饵",lv:"新手首选",layer:"全水层，贴底为主",
+   fish:"鳜鱼、鲈鱼、黑鱼",act:"慢跳底：贴底→跳起→落底→再跳",
+   use:"最万能的软饵组合，成本极低。鳜鱼几乎必吃——沿着乱石边缘慢慢跳，咬口都在回落的那一下。配重按水深选：浅水 3–5g，深水 10g+。"},
+  {n:"德州钓组（软虫）",key:"dezhou",kind:"软饵",lv:"进阶",layer:"底层，重障碍区",
+   fish:"鲈鱼、黑鱼",act:"拖、跳、停，慢为主",
+   use:"子弹铅+曲柄钩的防挂组合，能在树杈、草洞、乱石里硬穿。挂底率最低的搜障碍方案，有结构的地方就交给它。"},
+  {n:"雷蛙（青蛙）",key:"leizao",kind:"水面系",lv:"新手",layer:"水面，草区顶部",
+   fish:"黑鱼",act:"轻抽让蛙腿打水，停顿逗咬",
+   use:"钓黑鱼专用，双钩上翘防挂，直接扔在荷叶、水草上都不会挂。黑鱼炸水咬蛙后默数两秒再大力扬竿。夏秋黑鱼活跃期最凶。"},
+  {n:"胡须佬（复合亮片）",key:"huxulao",kind:"金属",lv:"进阶",layer:"中层，草区上方",
+   fish:"鲈鱼、鳡鱼",act:"匀收，贴近草头",
+   use:"钢丝框带动亮片闪光+铅头钩组合，抗挂性比 VIB 好。搜索大面积草区效率高，鱼躲在草里追出来就是它。"},
+  {n:"铁板（Jig / 慢摇铁板）",key:"tieban",kind:"金属",lv:"进阶",layer:"深水 / 海水",
+   fish:"鲅鱼、石斑、海鲈",act:"慢摇（小抽）或快抽，模拟受伤小鱼下沉",
+   use:"海钓船钓和大水库深水主力。远投打深水，下沉姿态诱鱼。海水用防锈款，前导线一定要够粗——石斑磨线极快。"},
+  {key:"ganshi", n:"飞蝇·干式毛钩（Dry Fly）",kind:"飞蝇",lv:"进阶",layer:"水面 / 近表层",
+   fish:"马口、白条、溪哥、鳟鱼",act:"上游抛投，让毛钩随流自然漂下，几乎不抽动",
+   use:"模拟落水昆虫，做到「漂着不动」最关键——多余的拖动会让鱼警觉。溪流钓马口的经典玩法，需要飞蝇竿（#3–5）配专用飞蝇线。"},
+  {key:"ruochong", n:"飞蝇·若虫 / 湿式毛钩（Nymph）",kind:"飞蝇",lv:"进阶",layer:"中层 / 近底",
+   fish:"鳟鱼、马口、白条、鲤",act:"顺流下沉，末端轻提收线，控制下沉速度",
+   use:"模拟水生昆虫幼虫，鱼在水下捕食时的首选。钨珠配重控制深度，用毛钩指示器观察咬口。清水溪流最有效。"},
+  {key:"streamer", n:"飞蝇·串钩毛钩（Streamer）",kind:"飞蝇",lv:"进阶",layer:"全水层，主动搜索",
+   fish:"鳟鱼、翘嘴、鳜鱼、鲈鱼",act:"短抽快收，模拟小鱼逃窜",
+   use:"模仿小鱼，可大范围主动搜索。掠食鱼追击小鱼时最有效，用飞蝇竿也能玩路亚翘嘴。颜色：清水用自然色，浑水用亮色。"}
+];
+
 const METHODS = [
   {n:"台钓（悬坠钓）",tag:"新手首选",body:`
     <p class="small muted" style="margin-bottom:14px">主线悬空、铅坠悬在水中、双钩触底——这是中国大陆最主流的钓法，器材成熟、信息反馈最灵敏。</p>
@@ -479,4 +522,54 @@ const TABS = [
   {id:"rules",t:"安全守则",icon:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>'}
 ];
 
-module.exports = { FISH, BAITS, METHODS, GEAR, MKIND, TABS };
+/* 钓鱼教学视频（钓法页分类列表 → 独立播放页 pages/rigvideo）。
+   微信小程序个人主体不支持 web-view，无法直接内嵌 B 站等网页；
+   播放页用原生 <video> 组件，src 必须是可直接播放的 HTTPS 视频地址
+   （自己的服务器/CDN，或腾讯视频 vid 走 txvod）。
+   上线前需在小程序后台「开发管理 → 开发设置 → 服务器域名」把视频域名
+   加入 downloadFile 合法域名（开发工具勾选「不校验合法域名」可临时预览）。
+   下面 src 为占位示例，请替换为真实教学视频地址。
+   cat = 分类（分组标题）；title = 教程名；dur = 时长；desc = 一句话简介。 */
+const RIG_VIDEOS = [
+  /* —— 台钓线组 —— */
+  { cat: "台钓线组", title: "主线连接竿稍 · 马蹄扣活结", dur: "02:40", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "竿稍绳最稳的活结绑法：一拉即紧、收竿一拽就脱，主线不伤线。" },
+  { cat: "台钓线组", title: "主线绑八字环 · 两种常用结", dur: "03:10", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "台钓线组必备。演示快速结与双穿结，拉力损失最小。" },
+  { cat: "台钓线组", title: "子线绑双钩 · 标准绑法", dur: "04:25", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "子线尺 + 绑钩器手绑，钩距、圈数、湿水收线要点一次讲清。" },
+  { cat: "台钓线组", title: "整组穿法 · 太空豆/漂座/铅皮座", dur: "05:30", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "从竿稍到铅皮：穿组顺序、漂座方向、铅皮座锁紧的完整流程。" },
+  { cat: "台钓线组", title: "竿稍绳更换 · 蛇口线绑法", dur: "03:50", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "竿稍绳老化打卷就换。蛇口线打结、热缩管固定一步到位。" },
+  /* —— 路亚线组 —— */
+  { cat: "路亚线组", title: "PE 线接前导 · FG 结", dur: "06:20", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "路亚最结实的线接线：PE 与碳线前导连接，顺滑过导环、拉力接近主线。" },
+  { cat: "路亚线组", title: "前导绑拟饵 · 改良 clinch 结", dur: "02:30", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "亮片 / 米诺 / 软虫通用。5 圈改良 clinch，湿水收紧不伤线。" },
+  { cat: "路亚线组", title: "纺车轮上线 · 绕线方向与松紧", dur: "04:10", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "上线方向决定抛投会不会炸线。绑轴、张力、留 1–2mm 边距。" },
+  { cat: "路亚线组", title: "德州钓组 · 子弹铅 + 曲柄钩", dur: "03:40", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "防挂搜障碍首选。子弹铅方向、曲柄钩穿饵与藏尖步骤。" },
+  /* —— 调漂找底 —— */
+  { cat: "调漂找底", title: "调四钓二 · 半水调漂全流程", dur: "07:10", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "从重铅找底到半水调目、称饵、钓目设定，台钓调漂一遍通。" },
+  { cat: "调漂找底", title: "精确找底 · 单饵/双饵称饵重", dur: "05:00", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "知道每颗饵压几目，才能调得准、钓得灵钝分明。" },
+  { cat: "调漂找底", title: "跑铅 / 双铅 · 走水与抗风浪", dur: "06:30", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "有流水或大风时稳住线组、不失灵敏的两种大招。" },
+  { cat: "调漂找底", title: "浮漂吃铅选择 · 按水深风级", dur: "04:20", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "吃铅小了抛不出去、大了信号钝，按公式选漂。" },
+  /* —— 抛竿手法 —— */
+  { cat: "抛竿手法", title: "台钓甩竿 · 侧抛与荡抛", dur: "03:30", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "坐姿荡抛、立姿侧抛，有树有风时怎么抛都不挂钩。" },
+  { cat: "抛竿手法", title: "路亚抛投 · 过头抛/侧抛不炸线", dur: "05:40", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "指拨控制出线、抛前刹车设定，远投又干净。" },
+  { cat: "抛竿手法", title: "精准打点 · 抛竿落点控制", dur: "03:20", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "同一钓点反复落点误差小，窝子才聚得拢。" },
+  /* —— 看漂读口 —— */
+  { cat: "看漂读口", title: "鲫鱼漂相 · 顶漂顿口分辨", dur: "04:50", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "上顶、下顿、点动各代表什么，提竿时机怎么抓。" },
+  { cat: "看漂读口", title: "鲤鱼黑漂 · 放口时机", dur: "04:00", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "鲤鱼的试探口不要理，干净黑漂再扬竿。" },
+  { cat: "看漂读口", title: "走漂与假口 · 风浪中抓实口", dur: "05:10", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "走水顶风时漂乱动，区分真吃口与水流假象。" },
+  /* —— 开饵打窝 —— */
+  { cat: "开饵打窝", title: "拉饵开制 · 饵水比与状态", dur: "05:20", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "水比、醒饵、收拢成团，拉出饱满不黏手。" },
+  { cat: "开饵打窝", title: "酒米打窝 · 用量与补窝节奏", dur: "04:30", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "一次少打、鱼稀再补，避免死窝。" },
+  { cat: "开饵打窝", title: "鲢鳙雾化饵 · 开饵与找水层", dur: "06:00", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "饵要轻散、从 1m 逐层下探找鱼层。" },
+  /* —— 选位看水 —— */
+  { cat: "选位看水", title: "野钓选位 · 铧尖/洄湾/进出水口", dur: "06:40", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "鱼道与水流汇合处，三个黄金标点怎么挑。" },
+  { cat: "选位看水", title: "看水色水温 · 判断鱼层", dur: "05:00", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "清浑、肥瘦、温跃层，决定钓深还是钓浅。" },
+  { cat: "选位看水", title: "看天气选钓点 · 气压风向", dur: "04:40", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "低气压鱼上浮、北风好上鱼，出钓前先看天。" },
+  /* —— 路亚操控 —— */
+  { cat: "路亚操控", title: "抽停手法 · 触发攻击", dur: "04:10", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "抽两下停一秒，模拟受伤小鱼引发追击。" },
+  { cat: "路亚操控", title: "慢跳底 · 鳜鱼鲈鱼贴底", dur: "03:50", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "触底、跳起、再触底，专治贴底伏击鱼。" },
+  { cat: "路亚操控", title: "搜索节奏 · 快收与变速", dur: "03:30", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "大面积找鱼先快收覆盖，有炸水再细化。" },
+  /* —— 新手入门 —— */
+  { cat: "新手入门", title: "第一套竿怎么选 · 调性长度", dur: "06:00", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "综合竿 4.5/5.4m、28 调最通用，预算怎么花。" },
+  { cat: "新手入门", title: "装备清单与搭配 · 线号号数", dur: "05:30", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "主线子线钩号怎么配，一套够用到连杆。" }
+];
+
+module.exports = { FISH, BAITS, LURES, METHODS, GEAR, MKIND, TABS, RIG_VIDEOS };

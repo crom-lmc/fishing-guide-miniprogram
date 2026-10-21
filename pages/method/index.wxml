@@ -15,4 +15,29 @@
       <rich-text nodes="{{item.nodes}}"></rich-text>
     </view>
   </view>
+
+  <!-- 钓鱼教学视频：列表只展示信息卡，点右侧播放键跳独立播放页 -->
+  <view class="card mt2" wx:if="{{vgroups.length}}">
+    <view class="cardhd">
+      <text class="h2">钓鱼教学视频</text>
+      <text class="tag w">实操</text>
+    </view>
+    <text class="small muted">从绑线组到调漂读口，分类整理好了。点右侧播放键开始。</text>
+    <block wx:for="{{vgroups}}" wx:for-item="g" wx:key="cat">
+      <view class="rigv-hd">
+        <text class="rigv-kind">{{g.cat}}</text>
+        <text class="rigv-count">{{g.items.length}} 个教程</text>
+      </view>
+      <view class="rigv" wx:for="{{g.items}}" wx:key="title" data-i="{{item._i}}" hover-class="rigv-hover" bindtap="playVideo">
+        <view class="rigv-main">
+          <view class="rigv-cap">
+            <text class="rigv-t">{{item.title}}</text>
+            <text class="rigv-dur">{{item.dur}}</text>
+          </view>
+          <text class="rigv-desc small muted">{{item.desc}}</text>
+        </view>
+        <view class="rigv-play"><text class="rigv-tri">▶</text></view>
+      </view>
+    </block>
+  </view>
 </view>
