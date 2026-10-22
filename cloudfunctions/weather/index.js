@@ -7,6 +7,10 @@
 //       天气失败时 ok:false 且带 msg；地名失败不影响天气，place 退化为 ""
 const https = require("https");
 
+// 腾讯位置服务 key（可选）：配了它，附近 POI 搜索和逆地址解析都能到门牌级。
+// 在云开发控制台 → 本函数 → 配置 → 环境变量里加 TENCENT_MAP_KEY 即可，不配也能跑（走免 key 方案）。
+const TENCENT_KEY = process.env.TENCENT_MAP_KEY || "";
+
 function get(url, timeout) {
   return new Promise((resolve, reject) => {
     const u = new URL(url);
@@ -99,20 +103,91 @@ function compose(d) {
   return parts.slice(0, 3).join("");
 }
 
+// ---- 地名第二级：Photon（免 key，能到小区 / 路名）----
+// BigDataCloud 只给到区县（如「新城区」），informative 里全是「亚洲 / 时区 / 渭河平原」这类长文本，
+// 拿不到街道。Photon 是 OSM 数据，同一个点能返回「省气象局家属院」「龙首中路」这种具体地名。
+// 注意：Photon 不支持 lang=zh（带上直接 400），不带参数反而返回中文原名。
+function photonPlace(lat, lng) {
+  return get("https://photon.komoot.io/reverse?lat=" + lat.toFixed(5)
+    + "&lon=" + lng.toFixed(5) + "&limit=5", 6000)
+    .then((j) => {
+      const arr = (j && j.features) || [];
+      for (let i = 0; i < arr.length; i++) {
+        const p = arr[i].properties || {};
+        const nm = t2s(String(p.name || "").trim());
+        if (!nm || nm === "中国" || nm === "中华人民共和国") continue;
+        // 省/市/区县这级太粗，留给 BigDataCloud，这里只要更细的
+        const k = p.osm_key || "", v = p.osm_value || "";
+        if (k === "place" && /^(country|state|county|city|town|district)$/.test(v)) continue;
+        return nm;
+      }
+      return "";
+    })
+    .catch(() => "");
+}
+
+// ---- 地名第一级：腾讯位置服务（配了 TENCENT_MAP_KEY 才启用，最准）----
+// 返回省市区 + 街道门牌 + 最近地标，是国内数据里唯一能稳定到门牌级的。
+function tencentGeocode(lat, lng) {
+  return get("https://apis.map.qq.com/ws/geocoder/v1/?location=" + lat + "," + lng
+    + "&key=" + TENCENT_KEY + "&get_poi=0", 6000)
+    .then((j) => {
+      if (!j || j.status !== 0) throw new Error((j && j.message) || "腾讯逆地址解析异常");
+      const r = j.result || {};
+      const ac = r.address_component || {};
+      const parts = [];
+      const push = (v) => {
+        const s0 = Array.isArray(v) ? (v[0] || "") : v;   // 直辖市的 city 是数组
+        let s = t2s(String(s0 == null ? "" : s0).trim());
+        for (let i = 0; i < PROV_SHORT.length; i++) s = s.replace(PROV_SHORT[i][0], PROV_SHORT[i][1]);
+        if (s && parts.indexOf(s) < 0) parts.push(s);
+      };
+      push(ac.province);
+      push(ac.city);
+      push(ac.district);
+      let out = parts.join("");
+      const st = t2s(String(ac.street || "").trim());
+      const sn = t2s(String(ac.street_number || "").trim());
+      if (st) {
+        out += "·" + st + sn;
+      } else {
+        // 没解析出街道时，用 1km 内最近的地标补一个参照物
+        const lm = (r.landmarks || [])[0];
+        if (lm && lm.title) out += "·" + t2s(String(lm.title));
+      }
+      return out;
+    });
+}
+
 function fetchPlace(lat, lng) {
-  return get("https://api.bigdatacloud.net/data/reverse-geocode-client"
+  // 1) 腾讯：最准，但要自己申请 key
+  const viaTencent = TENCENT_KEY
+    ? tencentGeocode(lat, lng).catch(() => "")
+    : Promise.resolve("");
+
+  // 2) 免 key 兜底：BigDataCloud 出省市区，Photon 出小区/路名，两个并行
+  const viaBD = get("https://api.bigdatacloud.net/data/reverse-geocode-client"
     + "?latitude=" + lat.toFixed(5) + "&longitude=" + lng.toFixed(5)
     + "&localityLanguage=zh", 8000)
     .then(compose)
-    .catch(() => "");   // 地名拿不到只影响展示，静默降级
+    .catch(() => "");
+  const viaPhoton = photonPlace(lat, lng);
+
+  return Promise.all([viaTencent, viaBD, viaPhoton]).then((r) => {
+    if (r[0]) return r[0];
+    const bd = r[1], ph = r[2];
+    // Photon 的结果如果已经包含在省市区里（比如返回「新城区」），就不重复拼
+    const extra = (ph && (!bd || bd.indexOf(ph) < 0)) ? ph : "";
+    if (extra) return bd ? bd + "·" + extra : extra;
+    return bd;   // 三级都拿不到就是空字符串，只显示坐标
+  });
 }
 
 // ===== 附近 POI（水域 / 钓场）=====
 // 数据源优先级：
-//   1) 腾讯位置服务 place/search —— 在云开发控制台给本函数配环境变量 TENCENT_MAP_KEY 即启用；
+//   1) 腾讯位置服务 place/search —— 配了环境变量 TENCENT_MAP_KEY 即启用（定义在文件顶部）；
 //      真正的 POI 搜索（含收费钓场），返回 _distance，结果最准。
 //   2) Overpass / OSM（免 key 兜底）—— 只能按 OSM 标签找水域，国内钓场数据几乎为空。
-const TENCENT_KEY = process.env.TENCENT_MAP_KEY || "";
 
 function haversine(a, b, c, d) {
   const R = 6371000, p = Math.PI / 180;

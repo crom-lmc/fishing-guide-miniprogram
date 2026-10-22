@@ -366,7 +366,8 @@ Page(TH.mix({
   // 定位结果文案：拿到地名就显示「陕西省西安市未央区」+ 坐标辅助；地名取不到就只显示坐标
   // 明确标出这一坐标是「精确定位」（地图组件中心对齐，几十米级）还是降级后的「模糊定位」（城市级，可差数公里）
   geoText(p, place) {
-    const coord = p.lat.toFixed(3) + "°N, " + p.lng.toFixed(3) + "°E";
+    // 4 位小数 ≈ 11m，够区分同一片水域的不同岸线；3 位只有百米级，看着像「只定位到区」
+    const coord = p.lat.toFixed(4) + "°N, " + p.lng.toFixed(4) + "°E";
     const how = p.fuzzy ? "，模糊定位" : "，精确定位";
     if (!place) return coord + how;
     return place + how + " " + coord;
