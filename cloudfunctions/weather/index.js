@@ -6,10 +6,15 @@
 // 返回：{ ok: true, weather: <Open-Meteo JSON>, place: "陕西省西安市未央区" }
 //       天气失败时 ok:false 且带 msg；地名失败不影响天气，place 退化为 ""
 const https = require("https");
+const crypto = require("crypto");
 
 // 腾讯位置服务 key（可选）：配了它，附近 POI 搜索和逆地址解析都能到门牌级。
-// 在云开发控制台 → 本函数 → 配置 → 环境变量里加 TENCENT_MAP_KEY 即可，不配也能跑（走免 key 方案）。
+// 在云开发控制台 → 本函数 → 配置 → 环境变量里加：
+//   TENCENT_MAP_KEY = 完整 key（形如 XXXXX-XXXXX-XXXXX-XXXXX-XXXXX）
+//   TENCENT_MAP_SK  = 该 key 的 Secret key（仅当 key 启用了「签名校验」才需要）
+// 不配也能跑（走免 key 方案）。
 const TENCENT_KEY = process.env.TENCENT_MAP_KEY || "";
+const TENCENT_SK = process.env.TENCENT_MAP_SK || "";
 
 // ===== 坐标系换算（本次修复的根因）=====
 // 小程序侧拿到的坐标全部是 GCJ02（火星坐标）：地图组件 moveToLocation 后的中心、chooseLocation 返回值。
@@ -78,6 +83,50 @@ function get(url, timeout) {
     req.setTimeout(timeout || 9000, () => req.destroy(new Error("timeout")));
     req.on("error", reject);
     req.end();
+  });
+}
+
+// ---- 腾讯 WebServiceAPI 签名（key 启用「签名校验」时必须）----
+// 官方规则（https://lbs.qq.com/faq/serverFaq/webServiceKey 第 4 节）：
+//   1) 参数按「参数名」ASCII 升序排序（a-z）；
+//   2) 参与 md5 的必须是**未做任何 URL 编码的原始值**；
+//   3) sig = md5(请求路径 + "?" + 排序后的 k=v&k=v + SK)，32 位小写；
+//   4) 实际发请求时值要 URL 编码，但签名串用原始值；路径带不带尾斜杠均可，但签名与请求必须一致。
+// 第 1 条是最容易踩的坑：不排序就必然 111（我最初按文档参数原顺序算，实测全是 111）。
+let TENCENT_ENCODE_STYLE = "minimal";   // minimal=仅中文等非 ASCII 才编码；full=全部 encodeURIComponent
+
+function md5hex(s) {
+  return crypto.createHash("md5").update(s, "utf8").digest("hex");
+}
+
+// params: { 参数名: 原始值(未编码) }
+function tencentSign(pathOnly, params, fullEncode) {
+  const keys = Object.keys(params).sort();                      // ① 字典序
+  const rawQuery = keys.map((k) => k + "=" + params[k]).join("&");  // ② 原始值
+  const sig = TENCENT_SK ? md5hex(pathOnly + "?" + rawQuery + TENCENT_SK) : "";
+  const sendQuery = keys.map((k) => {
+    const v = String(params[k]);
+    const need = fullEncode || /[^\x20-\x7E]/.test(v);          // ③ 只有需要时才编码
+    return k + "=" + (need ? encodeURIComponent(v) : v);
+  }).join("&");
+  return { sendQuery: sendQuery, sig: sig };
+}
+
+function tencentGet(pathOnly, params, timeout) {
+  const a = tencentSign(pathOnly, params, TENCENT_ENCODE_STYLE === "full");
+  const url = "https://apis.map.qq.com" + pathOnly + "?" + a.sendQuery + (a.sig ? "&sig=" + a.sig : "");
+  return get(url, timeout || 7000).then((j) => {
+    if (!j || j.status !== 111 || !TENCENT_SK) return j;        // 111 才可能是编码风格问题
+    console.log("[weather] 腾讯签名 111，改用全编码风格重试");
+    const b = tencentSign(pathOnly, params, TENCENT_ENCODE_STYLE !== "full");
+    return get("https://apis.map.qq.com" + pathOnly + "?" + b.sendQuery + "&sig=" + b.sig, timeout || 7000)
+      .then((j2) => {
+        if (j2 && j2.status === 0) {
+          TENCENT_ENCODE_STYLE = TENCENT_ENCODE_STYLE === "full" ? "minimal" : "full";
+          console.log("[weather] 腾讯签名编码风格已锁定为 " + TENCENT_ENCODE_STYLE);
+        }
+        return j2;
+      });
   });
 }
 
@@ -190,8 +239,11 @@ function photonPlace(lat, lng) {
 // ---- 地名第一级：腾讯位置服务（配了 TENCENT_MAP_KEY 才启用，最准）----
 // 返回省市区 + 街道门牌 + 最近地标，是国内数据里唯一能稳定到门牌级的。
 function tencentGeocode(lat, lng) {
-  return get("https://apis.map.qq.com/ws/geocoder/v1/?location=" + lat + "," + lng
-    + "&key=" + TENCENT_KEY + "&get_poi=1", 6000)
+  return tencentGet("/ws/geocoder/v1", {
+    location: lat + "," + lng,
+    key: TENCENT_KEY,
+    get_poi: 1          // 必带：只有它返回周边 POI，才拿得到「广联达数字建筑研发大厦 / 凯瑞H座」这类楼名
+  }, 6000)
     .then((j) => {
       if (!j || j.status !== 0) throw new Error((j && j.message) || "腾讯逆地址解析异常");
       const r = j.result || {};
@@ -247,8 +299,16 @@ function fetchPlace(lat, lng, coordType) {
   const g = fromWgs ? wgs2gcj(lat, lng) : { lat: lat, lng: lng };
 
   // 1) 腾讯：最准，但要自己申请 key（能到楼名 / 门牌）
+  //    关键：腾讯失败时把错误打进云函数日志。之前是 .catch(() => "") 静默吞掉，
+  //    结果「配了 key 却还是楼名级解析不出来」时，线上完全看不到原因（是 311 格式错误？
+  //    还是 110 没开通 WebServiceAPI？）。现在把 message 记下来，去云开发控制台 → 日志即可定位。
+  let tencentErr = "";
   const viaTencent = TENCENT_KEY
-    ? tencentGeocode(g.lat, g.lng).catch(() => "")
+    ? tencentGeocode(g.lat, g.lng).catch((e) => {
+        tencentErr = (e && e.message) || "未知错误";
+        console.error("[weather] 腾讯逆地址解析失败：" + tencentErr);
+        return "";
+      })
     : Promise.resolve("");
 
   // 2) 免 key 兜底：BigDataCloud 出省市区，Photon 出小区/楼名，两个并行（都按 WGS84 查）
@@ -260,12 +320,16 @@ function fetchPlace(lat, lng, coordType) {
   const viaPhoton = photonPlace(w.lat, w.lng);
 
   return Promise.all([viaTencent, viaBD, viaPhoton]).then((r) => {
-    if (r[0]) return r[0];
-    const bd = r[1], ph = r[2];
-    // Photon 的结果如果已经包含在省市区里（比如返回「新城区」），就不重复拼
-    const extra = (ph && (!bd || bd.indexOf(ph) < 0)) ? ph : "";
-    if (extra) return bd ? bd + "·" + extra : extra;
-    return bd;   // 三级都拿不到就是空字符串，只显示坐标
+    let place;
+    if (r[0]) place = r[0];
+    else {
+      const bd = r[1], ph = r[2];
+      // Photon 的结果如果已经包含在省市区里（比如返回「新城区」），就不重复拼
+      const extra = (ph && (!bd || bd.indexOf(ph) < 0)) ? ph : "";
+      place = extra ? (bd ? bd + "·" + extra : extra) : bd;
+    }
+    // tencentErr 透传给调用方：配了 key 但仍拿不到楼名时，能直接看到是 311 / 110 / 163 哪一类
+    return { place: place, tencentErr: tencentErr };
   });
 }
 
@@ -284,11 +348,14 @@ function haversine(a, b, c, d) {
 }
 
 function tencentPlace(lat, lng, radius, keyword) {
-  const url = "https://apis.map.qq.com/ws/place/v1/search"
-    + "?keyword=" + encodeURIComponent(keyword)
-    + "&boundary=nearby(" + lat + "," + lng + "," + Math.round(radius) + ",1)"
-    + "&orderby=_distance&page_size=20&key=" + TENCENT_KEY;
-  return get(url, 9000).then((j) => {
+  const r = Math.round(radius);
+  return tencentGet("/ws/place/v1/search", {
+    keyword: keyword,
+    boundary: "nearby(" + lat + "," + lng + "," + r + ",1)",
+    orderby: "_distance",
+    page_size: 20,
+    key: TENCENT_KEY
+  }, 9000).then((j) => {
     if (!j || j.status !== 0) throw new Error((j && j.message) || "腾讯位置服务返回异常");
     return (j.data || []).map((p) => ({
       name: p.title || "",
@@ -500,12 +567,14 @@ exports.main = async (event) => {
   const w = coordType === "wgs84" ? { lat: lat, lng: lng } : gcj2wgs(lat, lng);
 
   // 两个接口并行，总耗时取决于较慢的那个
-  const [weather, place] = await Promise.all([
+  const [weather, placeRes] = await Promise.all([
     fetchWeather(w.lat, w.lng).catch((e) => ({ __err: e.message || "天气接口失败" })),
     fetchPlace(lat, lng, coordType)
   ]);
+  const place = (placeRes && placeRes.place) || "";
+  const tencentErr = (placeRes && placeRes.tencentErr) || "";
 
-  if (weather && weather.__err) return { ok: false, msg: weather.__err, place: place };
-  if (!weather || !weather.current) return { ok: false, msg: "天气接口返回异常", place: place };
-  return { ok: true, weather: weather, place: place };
+  if (weather && weather.__err) return { ok: false, msg: weather.__err, place: place, tencent_err: tencentErr };
+  if (!weather || !weather.current) return { ok: false, msg: "天气接口返回异常", place: place, tencent_err: tencentErr };
+  return { ok: true, weather: weather, place: place, tencent_err: tencentErr };
 };

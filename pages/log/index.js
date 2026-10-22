@@ -71,8 +71,26 @@ Page(TH.mix({
   },
 
   refresh() {
-    const list = app.get(app.KEYS.LOG, []) || [];
-    const total = list.reduce((a, r) => a + (+r.count || 0), 0);
+    const raw = app.get(app.KEYS.LOG, []) || [];
+    // 钓点字段拆解（仅用于渲染，不写回存储）：
+    //   _md / _week 短日期与星期；_region / _name 按「 · 」拆行政区与楼名，让楼名当主标题更醒目
+    const list = raw.map((r) => {
+      const d = (r.date || "").split("-");
+      const sp = r.spot || "";
+      const idx = sp.indexOf(" · ");
+      // 星期：手动拼 Date 避免 UTC 解析把日期往前挪一天（中国时区安全）
+      const w = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+      const dt = (d[0] && d[1] && d[2]) ? new Date(+d[0], +d[1] - 1, +d[2]) : null;
+      return Object.assign({}, r, {
+        _day: d[2] || "",
+        _month: d[1] ? d[1] + "月" : "",
+        _md: (d[1] && d[2]) ? d[1] + "." + d[2] : (r.date || ""),   // B 右上角短日期：10.22
+        _week: dt ? w[dt.getDay()] : "",                              // B 右上角星期：周四
+        _region: idx >= 0 ? sp.slice(0, idx) : "",
+        _name: idx >= 0 ? sp.slice(idx + 3) : sp
+      });
+    });
+    const total = raw.reduce((a, r) => a + (+r.count || 0), 0);
     const max = list.reduce((a, r) => Math.max(a, +r.max || 0), 0);
     const hours = list.reduce((a, r) => a + (+r.hours || 0), 0);
     const freq = {};

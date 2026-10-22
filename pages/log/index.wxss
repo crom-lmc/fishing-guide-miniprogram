@@ -10,13 +10,144 @@
   margin: 8rpx 0 4rpx;
 }
 
-/* 记录行内「卡片」按钮 */
-.lops .pbtn {
+/* ====== 方案 D：色条卡（左侧青→蓝渐变条 + 最大单尾放大为视觉重心）====== */
+.vd {
+  display: flex;
+  overflow: hidden;          /* 让左侧色条贴住卡片圆角 */
+  padding: 0;                /* 内边距交给 vd-body */
+}
+.vd-bar {
+  width: 10rpx;
+  flex-shrink: 0;
+  background: linear-gradient(180deg, var(--a2), var(--a1));  /* 青 → 蓝（顶到底） */
+}
+.vd-body {
+  flex: 1;
+  min-width: 0;
+  padding: 24rpx 28rpx;
+}
+
+.vd-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+.vd-hl { flex: 1; min-width: 0; }       /* 标题区优先占满，超长省略 */
+.vd-title {
+  display: block;
+  font-size: 31rpx;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--tx);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vd-sub {                       /* 行政区降为副标 */
+  display: block;
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 右上：日期 + 操作，固定不挤压 */
+.vd-meta {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10rpx;
+}
+.vd-date {
+  font-size: 22rpx;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.vd-wk {
+  display: block;
+  font-size: 18rpx;
+  opacity: .65;
+  margin-top: 2rpx;
+  text-align: right;
+}
+.vd-ops { display: flex; align-items: center; flex-shrink: 0; }
+.vd-ops .pbtn {
   font-size: 22rpx;
   line-height: 1;
   color: var(--a2);
   border: 1rpx solid var(--a2);
   border-radius: 999rpx;
-  padding: 12rpx 20rpx;
+  padding: 10rpx 18rpx;
 }
-.lops .del { margin-left: 20rpx; }
+.vd-ops .del { font-size: 24rpx; color: var(--bad); margin-left: 16rpx; }
+
+/* 数据条：最左「最大单尾」放大，其余等宽 */
+.vd-statline {
+  display: flex;
+  align-items: flex-end;        /* 指标底部对齐 */
+  margin-top: 18rpx;
+  padding-top: 18rpx;
+  border-top: 1rpx solid var(--line);
+}
+.vd-hero {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding-right: 24rpx;
+  margin-right: 12rpx;
+  border-right: 1rpx solid var(--line);
+  min-width: 150rpx;
+}
+.vd-hero-top { display: flex; align-items: baseline; }
+.vd-hero-v {
+  font-size: 46rpx;            /* 最大单尾放大，视觉重心 */
+  font-weight: 700;
+  line-height: 1;
+  color: var(--a2);
+  font-variant-numeric: tabular-nums;
+}
+.vd-hero-u { font-size: 22rpx; color: var(--a2); margin-left: 4rpx; font-weight: 600; }
+.vd-hero-k { font-size: 20rpx; color: var(--muted); margin-top: 8rpx; }
+
+.vd-sm {
+  flex: 1;
+  text-align: center;
+  min-width: 0;
+  position: relative;
+}
+.vd-sm + .vd-sm::before {       /* 小指标之间的分隔线 */
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 4rpx;
+  bottom: 4rpx;
+  width: 1rpx;
+  background: var(--line);
+}
+.vd-sm-v {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--tx);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vd-sm-v.vt { color: var(--good); }   /* 鱼种用绿，其余灰，颜色只表一种含义 */
+.vd-sm-k {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 20rpx;
+  font-style: normal;
+  color: var(--muted);
+}
+
+/* 有坐标时的导航入口：收成一行小字 */
+.vd-geo { display: block; color: var(--a2); margin-top: 14rpx; font-size: 22rpx; }
