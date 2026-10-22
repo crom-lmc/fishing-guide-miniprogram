@@ -291,12 +291,36 @@ function tencentGeocode(lat, lng) {
     });
 }
 
+// ---- 地名缓存 ----
+// 目的有两个，都很实在：
+//   1) 省额度：腾讯位置服务个人开发者「逆地址解析」只有 6000 次/天、「地点搜索」只有 200 次/天。
+//      同一坐标（约 100m 网格）在 30 分钟内完全复用结果，开发期反复编译/来回切页就不再重复扣额度。
+//   2) 防跳变：腾讯成功时给的是「经开区政务服务中心 / 凯瑞H座」这种精确楼名，
+//      一旦腾讯失败（额度用尽 121、网络抖动），旧逻辑会回退到 Photon/OSM，返回「西安北站北广场」
+//      这类完全不同的地标，看起来就是「定位一会儿这个一会儿那个」。
+//      现在腾讯失败时优先复用该网格上次成功的地名，不再跳。
+// 云函数实例复用期间有效，冷启动会清空（dev 期反复编译通常命中同一实例，够用）。
+const PLACE_TTL = 30 * 60 * 1000;          // 新鲜期：30 分钟内直接复用，完全不发请求
+const PLACE_STALE_MAX = 24 * 3600 * 1000;  // 兜底期：腾讯挂了时，旧值最多可用 24 小时
+const _placeCache = {};
+
+function pkey(lat, lng) {
+  return Number(lat).toFixed(3) + "," + Number(lng).toFixed(3);   // ≈100m 网格
+}
+
 function fetchPlace(lat, lng, coordType) {
   // 调用方默认给 GCJ02（小程序地图/chooseLocation 都是这套），境外数据源要先转 WGS84；
   // 腾讯位置服务反过来只认 GCJ02，两者各用各的坐标，不能混。
   const fromWgs = coordType === "wgs84";
   const w = fromWgs ? { lat: lat, lng: lng } : gcj2wgs(lat, lng);
   const g = fromWgs ? wgs2gcj(lat, lng) : { lat: lat, lng: lng };
+
+  // 新鲜缓存直接返回：这一步能挡掉绝大多数开发期的重复调用
+  const ck = pkey(g.lat, g.lng);
+  const hit = _placeCache[ck];
+  if (hit && hit.tencent && Date.now() - hit.t < PLACE_TTL) {
+    return Promise.resolve({ place: hit.place, tencentErr: "", cached: true });
+  }
 
   // 1) 腾讯：最准，但要自己申请 key（能到楼名 / 门牌）
   //    关键：腾讯失败时把错误打进云函数日志。之前是 .catch(() => "") 静默吞掉，
@@ -321,12 +345,26 @@ function fetchPlace(lat, lng, coordType) {
 
   return Promise.all([viaTencent, viaBD, viaPhoton]).then((r) => {
     let place;
-    if (r[0]) place = r[0];
-    else {
+    let fromTencent = false;
+    if (r[0]) {
+      place = r[0];
+      fromTencent = true;
+    } else {
+      // 腾讯失败（多半是额度 121 / 网络抖动）：优先复用同网格上次成功的地名。
+      // 这样即使腾讯挂了，也不会突然跳到 OSM 里另一个地标（如「西安北站北广场」），
+      // 位置显示保持稳定，只是暂时不再刷新。
+      const old = _placeCache[ck];
+      if (old && old.tencent && Date.now() - old.t < PLACE_STALE_MAX) {
+        return { place: old.place, tencentErr: tencentErr, cached: true, stale: true };
+      }
       const bd = r[1], ph = r[2];
       // Photon 的结果如果已经包含在省市区里（比如返回「新城区」），就不重复拼
       const extra = (ph && (!bd || bd.indexOf(ph) < 0)) ? ph : "";
       place = extra ? (bd ? bd + "·" + extra : extra) : bd;
+    }
+    // 只缓存腾讯解析出的精确地名（回退源的名字不可靠，不缓存，免得被当成"好值"）
+    if (fromTencent && place) {
+      _placeCache[ck] = { place: place, t: Date.now(), tencent: true };
     }
     // tencentErr 透传给调用方：配了 key 但仍拿不到楼名时，能直接看到是 311 / 110 / 163 哪一类
     return { place: place, tencentErr: tencentErr };

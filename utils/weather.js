@@ -5,10 +5,62 @@
 // 部署：开发者工具 → 右键 cloudfunctions/weather → 上传并部署（需先在 mp 后台开通云开发）。
 const S = require("./score.js");
 
+// 同一位置 10 分钟内复用结果（≈100m 网格）：
+//   开发期反复编译、出钓页/日志页来回切、日志页与出钓页各查一次，都不会重复打云函数，
+//   既省腾讯位置服务的每日额度（逆地址解析 6000/天、地点搜索仅 200/天），
+//   也让同一位置的地名稳定，不会一会儿这个楼一会儿那个楼。
+// 内存 + 本地存储双缓存：内存挡同一页面内的重复调用，存储挡冷启动/跨页面。
+const CACHE_TTL = 10 * 60 * 1000;
+const CACHE_KEY = "fish.weather.cache.v1";
+const CACHE_MAX = 40;
+const _mem = {};
+
+function cacheKey(lat, lng, coordType) {
+  return Number(lat).toFixed(3) + "," + Number(lng).toFixed(3) + "," + (coordType || "gcj02");
+}
+
+function readStore() {
+  try {
+    return wx.getStorageSync(CACHE_KEY) || {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveStore(k, item) {
+  try {
+    const m = readStore();
+    m[k] = item;
+    const ks = Object.keys(m);
+    if (ks.length > CACHE_MAX) {
+      // 超量时丢掉最旧的，避免本地存储无限膨胀
+      ks.sort((a, b) => (m[a].t || 0) - (m[b].t || 0));
+      for (let i = 0; i < ks.length - CACHE_MAX; i++) delete m[ks[i]];
+    }
+    wx.setStorageSync(CACHE_KEY, m);
+  } catch (e) {}
+}
+
 // 返回 { weather: <Open-Meteo JSON>, place: "陕西省西安市未央区" }；失败都 reject
 // coordType：本项目客户端拿到的坐标都是 GCJ02（地图组件中心 / chooseLocation / getFuzzyLocation 均取 gcj02），
 // 传下去让云函数在查境外数据源前转 WGS84 —— 不转会整体偏 400~500m，逆地理编码就落到隔壁厂区了。
 function fetchAll(lat, lng, coordType) {
+  const ct = coordType || "gcj02";
+  const ck = cacheKey(lat, lng, ct);
+  const now = Date.now();
+
+  // 1) 内存缓存
+  const m = _mem[ck];
+  if (m && now - m.t < CACHE_TTL) return Promise.resolve(m.v);
+
+  // 2) 本地存储缓存（跨页面 / 冷启动）
+  const s = readStore()[ck];
+  if (s && now - s.t < CACHE_TTL) {
+    _mem[ck] = s;
+    return Promise.resolve(s.v);
+  }
+
+  // 3) 真正请求云函数
   return new Promise((resolve, reject) => {
     if (!wx.cloud || !wx.cloud.callFunction) {
       reject(new Error("当前微信版本不支持云开发，请手动填写。"));
@@ -16,21 +68,25 @@ function fetchAll(lat, lng, coordType) {
     }
     wx.cloud.callFunction({
       name: "weather",
-      data: { lat: lat, lng: lng, coordType: coordType || "gcj02" },
+      data: { lat: lat, lng: lng, coordType: ct },
       success: (r) => {
         const d = (r && r.result) || {};
         if (d.ok && d.weather && d.weather.current) {
-          resolve({ weather: d.weather, place: d.place || "" });
+          const v = { weather: d.weather, place: d.place || "" };
+          const item = { t: Date.now(), v: v };
+          _mem[ck] = item;
+          saveStore(ck, item);
+          resolve(v);
         } else {
           reject(new Error(d.msg || "天气数据获取失败"));
         }
       },
       fail: (e) => {
-        const m = (e && e.errMsg) || "";
+        const msg = (e && e.errMsg) || "";
         // 云函数没部署 / 云开发没开通时 errMsg 带 not exist、-404011 之类
-        reject(new Error(/not (exist|found)|找不到|未找到|-404011/.test(m)
+        reject(new Error(/not (exist|found)|找不到|未找到|-404011/.test(msg)
           ? "云函数 weather 未部署：请在开发者工具右键 cloudfunctions/weather → 上传并部署"
-          : "天气服务暂时不可用：" + m));
+          : "天气服务暂时不可用：" + msg));
       }
     });
   });

@@ -399,7 +399,14 @@ Page(TH.mix({
 
       const ctx = wx.createMapContext("geoMap", this);
       const start = () => {
-        this._geoFrom = { lat: this.data.lat, lng: this.data.lng };   // 记下定位前的中心，用于判断地图是否真的动了
+        // 判断「地图是否真的动了」的基准，必须锁定为【首次进入时的默认中心】，不能取 this.data.lat/lng：
+        // 精确定位成功后下面第 461 行会把 data.lat/lng 刷成真实位置，
+        // 于是下一次 moveToLocation 到位后，中心与「上一次的位置」完全相同，
+        // 会被 readGeoCenter 的 geo:notmoved 防御误判成失败 → 降级 fuzzyLocate；
+        // 再下一次基准又变成那个模糊位置，于是「一次精确、一次模糊」严格交替。
+        // 基准固定住，这个交替就消失了（地图已在真实位置时，中心 ≠ 默认中心，判定为真的动过）。
+        if (!this._defaultCenter) this._defaultCenter = { lat: this.data.lat, lng: this.data.lng };
+        this._geoFrom = this._defaultCenter;
         this._lastCenter = null;
         ctx.moveToLocation({
           success: () => {
