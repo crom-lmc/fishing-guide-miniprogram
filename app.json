@@ -17,6 +17,7 @@
     "pages/stats/index",
     "pages/rules/index"
   ],
+  "darkmode": true,
   "window": {
     "navigationBarBackgroundColor": "#12141C",
     "navigationBarTextStyle": "white",

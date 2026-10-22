@@ -522,53 +522,56 @@ const TABS = [
   {id:"rules",t:"安全守则",icon:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>'}
 ];
 
-/* 钓鱼教学视频清单。
-   注意：个人主体小程序不支持「文娱-视频」类目，视频内容审核不通过，
-   因此【只保留教程清单供查阅，不播放、不跳转】——原 pages/rigvideo 播放页已移除。
-   src / poster 字段暂不使用，保留以便日后主体升级为企业后恢复播放。
-   若恢复播放：src 必须是可直链的 HTTPS 视频地址，且需在小程序后台
-   「开发管理 → 开发设置 → 服务器域名」加入 downloadFile 合法域名。
+/* 钓鱼教学视频清单（「放链接」形式）。
+   背景：个人主体小程序不支持「文娱-视频」类目，内嵌播放第三方视频审核不通过，
+   因此不再在小程序内播放，改为【展示清单 + 每条附外部链接】，用户复制链接后
+   在微信 / 浏览器打开原平台观看。小程序本身不托管、不分发任何视频，过审最稳。
+   - url：外部视频链接（当前为各关键词在 B站搜索结果中「播放量最高」的具体视频，直接跳转观看）。
+     想换成你自己拍 / 已获授权的地址，直接覆盖本条 url 即可；留空则 method 页回退为按 title 生成 B站搜索链接。
+     注意：url 指向的是 B站第三方视频，小程序仅作外链、不托管不分发；建议尽量替换为自有或已授权内容，规避版权风险。
+   - src / poster：暂不使用，保留以便日后主体升级为企业、恢复内嵌播放时使用
+     （届时 src 须为可直链 HTTPS 地址，并在后台 downloadFile 合法域名中加入）。
    cat = 分类（分组标题）；title = 教程名；dur = 时长；desc = 一句话简介。 */
 const RIG_VIDEOS = [
   /* —— 台钓线组 —— */
-  { cat: "台钓线组", title: "主线连接竿稍 · 马蹄扣活结", dur: "02:40", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "竿稍绳最稳的活结绑法：一拉即紧、收竿一拽就脱，主线不伤线。" },
-  { cat: "台钓线组", title: "主线绑八字环 · 两种常用结", dur: "03:10", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "台钓线组必备。演示快速结与双穿结，拉力损失最小。" },
-  { cat: "台钓线组", title: "子线绑双钩 · 标准绑法", dur: "04:25", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "子线尺 + 绑钩器手绑，钩距、圈数、湿水收线要点一次讲清。" },
-  { cat: "台钓线组", title: "整组穿法 · 太空豆/漂座/铅皮座", dur: "05:30", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "从竿稍到铅皮：穿组顺序、漂座方向、铅皮座锁紧的完整流程。" },
-  { cat: "台钓线组", title: "竿稍绳更换 · 蛇口线绑法", dur: "03:50", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "竿稍绳老化打卷就换。蛇口线打结、热缩管固定一步到位。" },
+  { cat: "台钓线组", title: "主线连接竿稍 · 马蹄扣活结", dur: "02:40", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", url: "https://www.bilibili.com/video/BV1nU4y117B8", desc: "竿稍绳最稳的活结绑法：一拉即紧、收竿一拽就脱，主线不伤线。" },
+  { cat: "台钓线组", title: "主线绑八字环 · 两种常用结", dur: "03:10", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", url: "https://www.bilibili.com/video/BV1mz421m7Y9", desc: "台钓线组必备。演示快速结与双穿结，拉力损失最小。" },
+  { cat: "台钓线组", title: "子线绑双钩 · 标准绑法", dur: "04:25", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", url: "https://www.bilibili.com/video/BV1rD4y1y7Cm", desc: "子线尺 + 绑钩器手绑，钩距、圈数、湿水收线要点一次讲清。" },
+  { cat: "台钓线组", title: "整组穿法 · 太空豆/漂座/铅皮座", dur: "05:30", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", url: "https://www.bilibili.com/video/BV1eK4y1a7kB", desc: "从竿稍到铅皮：穿组顺序、漂座方向、铅皮座锁紧的完整流程。" },
+  { cat: "台钓线组", title: "竿稍绳更换 · 蛇口线绑法", dur: "03:50", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", url: "https://www.bilibili.com/video/BV1Qs411T7sr", desc: "竿稍绳老化打卷就换。蛇口线打结、热缩管固定一步到位。" },
   /* —— 路亚线组 —— */
-  { cat: "路亚线组", title: "PE 线接前导 · FG 结", dur: "06:20", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "路亚最结实的线接线：PE 与碳线前导连接，顺滑过导环、拉力接近主线。" },
-  { cat: "路亚线组", title: "前导绑拟饵 · 改良 clinch 结", dur: "02:30", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "亮片 / 米诺 / 软虫通用。5 圈改良 clinch，湿水收紧不伤线。" },
-  { cat: "路亚线组", title: "纺车轮上线 · 绕线方向与松紧", dur: "04:10", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "上线方向决定抛投会不会炸线。绑轴、张力、留 1–2mm 边距。" },
-  { cat: "路亚线组", title: "德州钓组 · 子弹铅 + 曲柄钩", dur: "03:40", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "防挂搜障碍首选。子弹铅方向、曲柄钩穿饵与藏尖步骤。" },
+  { cat: "路亚线组", title: "PE 线接前导 · FG 结", dur: "06:20", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", url: "https://www.bilibili.com/video/BV1hh411b7wr", desc: "路亚最结实的线接线：PE 与碳线前导连接，顺滑过导环、拉力接近主线。" },
+  { cat: "路亚线组", title: "前导绑拟饵 · 改良 clinch 结", dur: "02:30", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", url: "https://www.bilibili.com/video/BV1ED4y1b74z", desc: "亮片 / 米诺 / 软虫通用。5 圈改良 clinch，湿水收紧不伤线。" },
+  { cat: "路亚线组", title: "纺车轮上线 · 绕线方向与松紧", dur: "04:10", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", url: "https://www.bilibili.com/video/BV1Fu4y137qF", desc: "上线方向决定抛投会不会炸线。绑轴、张力、留 1–2mm 边距。" },
+  { cat: "路亚线组", title: "德州钓组 · 子弹铅 + 曲柄钩", dur: "03:40", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", url: "https://www.bilibili.com/video/BV11P411Q7k7", desc: "防挂搜障碍首选。子弹铅方向、曲柄钩穿饵与藏尖步骤。" },
   /* —— 调漂找底 —— */
-  { cat: "调漂找底", title: "调四钓二 · 半水调漂全流程", dur: "07:10", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "从重铅找底到半水调目、称饵、钓目设定，台钓调漂一遍通。" },
-  { cat: "调漂找底", title: "精确找底 · 单饵/双饵称饵重", dur: "05:00", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "知道每颗饵压几目，才能调得准、钓得灵钝分明。" },
-  { cat: "调漂找底", title: "跑铅 / 双铅 · 走水与抗风浪", dur: "06:30", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "有流水或大风时稳住线组、不失灵敏的两种大招。" },
-  { cat: "调漂找底", title: "浮漂吃铅选择 · 按水深风级", dur: "04:20", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "吃铅小了抛不出去、大了信号钝，按公式选漂。" },
+  { cat: "调漂找底", title: "调四钓二 · 半水调漂全流程", dur: "07:10", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", url: "https://www.bilibili.com/video/BV1dJ411A7xX", desc: "从重铅找底到半水调目、称饵、钓目设定，台钓调漂一遍通。" },
+  { cat: "调漂找底", title: "精确找底 · 单饵/双饵称饵重", dur: "05:00", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", url: "https://www.bilibili.com/video/BV1jW9kBLEEd", desc: "知道每颗饵压几目，才能调得准、钓得灵钝分明。" },
+  { cat: "调漂找底", title: "跑铅 / 双铅 · 走水与抗风浪", dur: "06:30", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", url: "https://www.bilibili.com/video/BV1B4411b7GU", desc: "有流水或大风时稳住线组、不失灵敏的两种大招。" },
+  { cat: "调漂找底", title: "浮漂吃铅选择 · 按水深风级", dur: "04:20", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", url: "https://www.bilibili.com/video/BV1v94y1D7eX", desc: "吃铅小了抛不出去、大了信号钝，按公式选漂。" },
   /* —— 抛竿手法 —— */
-  { cat: "抛竿手法", title: "台钓甩竿 · 侧抛与荡抛", dur: "03:30", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "坐姿荡抛、立姿侧抛，有树有风时怎么抛都不挂钩。" },
-  { cat: "抛竿手法", title: "路亚抛投 · 过头抛/侧抛不炸线", dur: "05:40", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "指拨控制出线、抛前刹车设定，远投又干净。" },
-  { cat: "抛竿手法", title: "精准打点 · 抛竿落点控制", dur: "03:20", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "同一钓点反复落点误差小，窝子才聚得拢。" },
+  { cat: "抛竿手法", title: "台钓甩竿 · 侧抛与荡抛", dur: "03:30", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", url: "https://www.bilibili.com/video/BV1ua411k7ir", desc: "坐姿荡抛、立姿侧抛，有树有风时怎么抛都不挂钩。" },
+  { cat: "抛竿手法", title: "路亚抛投 · 过头抛/侧抛不炸线", dur: "05:40", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", url: "https://www.bilibili.com/video/BV1wf4y1p7PQ", desc: "指拨控制出线、抛前刹车设定，远投又干净。" },
+  { cat: "抛竿手法", title: "精准打点 · 抛竿落点控制", dur: "03:20", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", url: "https://www.bilibili.com/video/BV1mN411o75c", desc: "同一钓点反复落点误差小，窝子才聚得拢。" },
   /* —— 看漂读口 —— */
-  { cat: "看漂读口", title: "鲫鱼漂相 · 顶漂顿口分辨", dur: "04:50", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "上顶、下顿、点动各代表什么，提竿时机怎么抓。" },
-  { cat: "看漂读口", title: "鲤鱼黑漂 · 放口时机", dur: "04:00", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "鲤鱼的试探口不要理，干净黑漂再扬竿。" },
-  { cat: "看漂读口", title: "走漂与假口 · 风浪中抓实口", dur: "05:10", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "走水顶风时漂乱动，区分真吃口与水流假象。" },
+  { cat: "看漂读口", title: "鲫鱼漂相 · 顶漂顿口分辨", dur: "04:50", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", url: "https://www.bilibili.com/video/BV1aJ411C7rb", desc: "上顶、下顿、点动各代表什么，提竿时机怎么抓。" },
+  { cat: "看漂读口", title: "鲤鱼黑漂 · 放口时机", dur: "04:00", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", url: "https://www.bilibili.com/video/BV1Tp4y1K7AP", desc: "鲤鱼的试探口不要理，干净黑漂再扬竿。" },
+  { cat: "看漂读口", title: "走漂与假口 · 风浪中抓实口", dur: "05:10", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", url: "https://www.bilibili.com/video/BV1Rw4m1y7N2", desc: "走水顶风时漂乱动，区分真吃口与水流假象。" },
   /* —— 开饵打窝 —— */
-  { cat: "开饵打窝", title: "拉饵开制 · 饵水比与状态", dur: "05:20", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "水比、醒饵、收拢成团，拉出饱满不黏手。" },
-  { cat: "开饵打窝", title: "酒米打窝 · 用量与补窝节奏", dur: "04:30", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "一次少打、鱼稀再补，避免死窝。" },
-  { cat: "开饵打窝", title: "鲢鳙雾化饵 · 开饵与找水层", dur: "06:00", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "饵要轻散、从 1m 逐层下探找鱼层。" },
+  { cat: "开饵打窝", title: "拉饵开制 · 饵水比与状态", dur: "05:20", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", url: "https://www.bilibili.com/video/BV1xC4y1h7kk", desc: "水比、醒饵、收拢成团，拉出饱满不黏手。" },
+  { cat: "开饵打窝", title: "酒米打窝 · 用量与补窝节奏", dur: "04:30", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", url: "https://www.bilibili.com/video/BV13mJR6tEoT", desc: "一次少打、鱼稀再补，避免死窝。" },
+  { cat: "开饵打窝", title: "鲢鳙雾化饵 · 开饵与找水层", dur: "06:00", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", url: "https://www.bilibili.com/video/BV1dT421m7t7", desc: "饵要轻散、从 1m 逐层下探找鱼层。" },
   /* —— 选位看水 —— */
-  { cat: "选位看水", title: "野钓选位 · 铧尖/洄湾/进出水口", dur: "06:40", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "鱼道与水流汇合处，三个黄金标点怎么挑。" },
-  { cat: "选位看水", title: "看水色水温 · 判断鱼层", dur: "05:00", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "清浑、肥瘦、温跃层，决定钓深还是钓浅。" },
-  { cat: "选位看水", title: "看天气选钓点 · 气压风向", dur: "04:40", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "低气压鱼上浮、北风好上鱼，出钓前先看天。" },
+  { cat: "选位看水", title: "野钓选位 · 铧尖/洄湾/进出水口", dur: "06:40", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", url: "https://www.bilibili.com/video/BV1NjKPzSEW1", desc: "鱼道与水流汇合处，三个黄金标点怎么挑。" },
+  { cat: "选位看水", title: "看水色水温 · 判断鱼层", dur: "05:00", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", url: "https://www.bilibili.com/video/BV1N3411Q7ok", desc: "清浑、肥瘦、温跃层，决定钓深还是钓浅。" },
+  { cat: "选位看水", title: "看天气选钓点 · 气压风向", dur: "04:40", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", url: "https://www.bilibili.com/video/BV1zR4y157Rn", desc: "低气压鱼上浮、北风好上鱼，出钓前先看天。" },
   /* —— 路亚操控 —— */
-  { cat: "路亚操控", title: "抽停手法 · 触发攻击", dur: "04:10", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "抽两下停一秒，模拟受伤小鱼引发追击。" },
-  { cat: "路亚操控", title: "慢跳底 · 鳜鱼鲈鱼贴底", dur: "03:50", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "触底、跳起、再触底，专治贴底伏击鱼。" },
-  { cat: "路亚操控", title: "搜索节奏 · 快收与变速", dur: "03:30", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "大面积找鱼先快收覆盖，有炸水再细化。" },
+  { cat: "路亚操控", title: "抽停手法 · 触发攻击", dur: "04:10", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", url: "https://www.bilibili.com/video/BV14PzRYTEQv", desc: "抽两下停一秒，模拟受伤小鱼引发追击。" },
+  { cat: "路亚操控", title: "慢跳底 · 鳜鱼鲈鱼贴底", dur: "03:50", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", url: "https://www.bilibili.com/video/BV17QpneuEXw", desc: "触底、跳起、再触底，专治贴底伏击鱼。" },
+  { cat: "路亚操控", title: "搜索节奏 · 快收与变速", dur: "03:30", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", url: "https://www.bilibili.com/video/BV1Xb411q7DA", desc: "大面积找鱼先快收覆盖，有炸水再细化。" },
   /* —— 新手入门 —— */
-  { cat: "新手入门", title: "第一套竿怎么选 · 调性长度", dur: "06:00", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "综合竿 4.5/5.4m、28 调最通用，预算怎么花。" },
-  { cat: "新手入门", title: "装备清单与搭配 · 线号号数", dur: "05:30", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", desc: "主线子线钩号怎么配，一套够用到连杆。" }
+  { cat: "新手入门", title: "第一套竿怎么选 · 调性长度", dur: "06:00", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", url: "https://www.bilibili.com/video/BV1T9NnzvEXN", desc: "综合竿 4.5/5.4m、28 调最通用，预算怎么花。" },
+  { cat: "新手入门", title: "装备清单与搭配 · 线号号数", dur: "05:30", src: "https://media.w3.org/2010/05/sintel/trailer.mp4", poster: "", url: "https://www.bilibili.com/video/BV1Y4411F7ka", desc: "主线子线钩号怎么配，一套够用到连杆。" }
 ];
 
 module.exports = { FISH, BAITS, LURES, METHODS, GEAR, MKIND, TABS, RIG_VIDEOS };

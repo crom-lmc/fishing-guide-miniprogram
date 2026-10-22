@@ -695,13 +695,51 @@ rich-text { font-size: 26rpx; color: #C9D2E3; line-height: 1.75; }
 .rigv-main { flex: 1; min-width: 0; }
 .rigv-cap { display: flex; align-items: baseline; gap: 12rpx; }
 .rigv-t { font-size: 28rpx; font-weight: 600; flex: 1; min-width: 0; }
-.rigv-dur { font-size: 21rpx; color: var(--muted); flex-shrink: 0; background: var(--card2); padding: 2rpx 14rpx; border-radius: 999rpx; }
 .rigv-desc { display: block; margin-top: 6rpx; line-height: 1.5; }
-.rigv-play {
-  width: 72rpx; height: 72rpx; border-radius: 50%; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
+/* 「放链接」形式：每条教程右侧复制链接按钮 */
+.rigv-link {
+  flex-shrink: 0;
+  font-size: 22rpx; font-weight: 600;
+  color: #0E1119;
   background: linear-gradient(135deg, var(--a1), var(--a2));
+  padding: 12rpx 20rpx; border-radius: 999rpx;
+  margin-left: 14rpx;
 }
-.rigv-tri { color: #0E1119; font-size: 24rpx; line-height: 1; margin-left: 4rpx; }
-/* 播放页 */
-.rv-v { width: 100%; height: 420rpx; border-radius: 14rpx; background: #000; display: block; }
+
+/* 引导在浏览器打开的浮层 */
+.guide-mask {
+  position: fixed; left: 0; right: 0; top: 0; bottom: 0;
+  background: rgba(0,0,0,.55);
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 48rpx; z-index: 100;
+}
+.guide-card {
+  width: 100%; max-width: 600rpx;
+  background: var(--card);
+  border: 1rpx solid var(--line);
+  border-radius: 20rpx;
+  padding: 40rpx 36rpx 32rpx;
+  box-sizing: border-box;
+}
+.guide-h { display: block; font-size: 32rpx; font-weight: 700; color: var(--tx); }
+.guide-sub { display: block; font-size: 25rpx; color: var(--muted); line-height: 1.6; margin-top: 16rpx; }
+.guide-url {
+  margin-top: 22rpx; padding: 18rpx 20rpx;
+  background: var(--card2); border: 1rpx solid var(--line); border-radius: 12rpx;
+}
+.guide-url-t {
+  font-size: 22rpx; color: var(--tx); word-break: break-all; line-height: 1.5;
+}
+.guide-btns { display: flex; gap: 20rpx; margin-top: 30rpx; }
+.guide-btn {
+  flex: 1; text-align: center; font-size: 28rpx; font-weight: 600;
+  padding: 22rpx 0; border-radius: 12rpx;
+}
+.guide-btn.ghost {
+  background: transparent; color: var(--muted);
+  border: 1rpx solid var(--line);
+}
+.guide-btn.primary {
+  background: linear-gradient(135deg, var(--a1), var(--a2));
+  color: #0E1119;
+}

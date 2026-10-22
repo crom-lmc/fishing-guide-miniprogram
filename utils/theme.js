@@ -2,6 +2,9 @@
 // 实现要点：小程序没有给 <page> 加 class 的能力，所以
 //   1) 颜色变量统一挂在页面根节点 `.wrap` 上，靠 `.wrap.light` 覆盖（CSS 变量会向下继承）；
 //   2) 页面背景、导航栏、底部 tabBar 是框架层，只能分别用 setBackgroundColor / setNavigationBarColor / setTabBarStyle 改。
+// 存的是「模式」：auto = 跟随手机主题（默认），light / dark = 手动固定。
+// get() 返回的是「实际主题」：auto 模式下解析成当前系统主题，其余原样返回——
+// 全项目其他地方只认 get()，不感知模式的存在。
 const KEY = "fish.theme.v1";
 
 const SKIN = {
@@ -33,8 +36,32 @@ const CALLOUT = {
   light: { color: "#1B2130", bgColor: "#FFFFFF" }
 };
 
+function getMode() {
+  try {
+    const v = wx.getStorageSync(KEY);
+    if (v === "light" || v === "dark" || v === "auto") return v;
+  } catch (e) { /* 忽略 */ }
+  return "auto";
+}
+
+// 手机当前主题：优先 getAppBaseInfo（轻量），老基础库退回 getSystemInfoSync
+function systemTheme() {
+  try {
+    if (wx.getAppBaseInfo) {
+      const i = wx.getAppBaseInfo();
+      if (i && i.theme) return i.theme;
+    }
+  } catch (e) { /* 忽略 */ }
+  try {
+    const s = wx.getSystemInfoSync();
+    if (s && s.theme) return s.theme;
+  } catch (e) { /* 忽略 */ }
+  return "dark";
+}
+
 function get() {
-  try { return wx.getStorageSync(KEY) === "light" ? "light" : "dark"; } catch (e) { return "dark"; }
+  const m = getMode();
+  return m === "auto" ? systemTheme() : m;
 }
 
 // 当前主题下「可读」的语义色（画文字、细条用）
@@ -46,6 +73,31 @@ function callout() { return CALLOUT[get()] || CALLOUT.dark; }
 function set(t) {
   try { wx.setStorageSync(KEY, t === "light" ? "light" : "dark"); } catch (e) { /* 忽略 */ }
 }
+
+function setMode(m) {
+  if (m !== "auto" && m !== "light" && m !== "dark") m = "auto";
+  try { wx.setStorageSync(KEY, m); } catch (e) { /* 忽略 */ }
+}
+
+// 手机主题切换时（仅 auto 模式生效）：刷新所有在栈页面的根 class + 框架层颜色。
+// 需要 app.json 开 darkmode: true 才能收到回调。
+let themeHooked = false;
+function hookThemeChange() {
+  if (themeHooked) return;
+  themeHooked = true;
+  if (!wx.onThemeChange) return;
+  wx.onThemeChange(function () {
+    if (getMode() !== "auto") return;
+    const t = get();
+    const cls = t === "light" ? "light" : "";
+    const pages = getCurrentPages() || [];
+    pages.forEach(p => {
+      try { if (p && p.setData && p.data && p.data.tc !== cls) p.setData({ tc: cls }); } catch (e) { /* 忽略 */ }
+    });
+    applyChrome(t);
+  });
+}
+hookThemeChange();
 
 function toggle() {
   const t = get() === "light" ? "dark" : "light";
@@ -100,6 +152,7 @@ function mix(opt) {
 }
 
 module.exports = {
-  KEY: KEY, get: get, set: set, toggle: toggle, applyChrome: applyChrome, mix: mix,
+  KEY: KEY, get: get, set: set, setMode: setMode, getMode: getMode, systemTheme: systemTheme,
+  toggle: toggle, applyChrome: applyChrome, mix: mix,
   levelTx: levelTx, vivid: vivid, callout: callout
 };

@@ -16,28 +16,42 @@
     </view>
   </view>
 
-  <!-- 钓鱼教学视频：个人主体小程序不支持视频类目（审核不通过），
-       这里只保留教程清单供查阅，去掉播放键与跳转，不再进入独立播放页。 -->
+  <!-- 钓鱼教学视频（放链接形式）：个人主体小程序不支持视频类目，内嵌播放审核不通过，
+       改为展示清单 + 每条附外部链接，点击复制后去微信/浏览器打开原平台观看。 -->
   <view class="card mt2" wx:if="{{vgroups.length}}">
     <view class="cardhd">
       <text class="h2">钓鱼教学视频</text>
       <text class="tag w">实操</text>
     </view>
-    <text class="small muted">从绑线组到调漂读口，分类整理好了。视频播放暂未开放，可先按要点练习。</text>
+    <text class="small muted">从绑线组到调漂读口，分类整理好了。点击任意一条即可复制视频链接，在微信 / 浏览器打开观看原教程（外部平台，非本程序托管）。</text>
     <block wx:for="{{vgroups}}" wx:for-item="g" wx:key="cat">
       <view class="rigv-hd">
         <text class="rigv-kind">{{g.cat}}</text>
         <text class="rigv-count">{{g.items.length}} 个教程</text>
       </view>
-      <view class="rigv" wx:for="{{g.items}}" wx:key="title">
+      <view class="rigv" wx:for="{{g.items}}" wx:key="title" hover-class="rigv-hover"
+            data-url="{{item.url}}" data-title="{{item.title}}" bindtap="openGuide">
         <view class="rigv-main">
           <view class="rigv-cap">
             <text class="rigv-t">{{item.title}}</text>
-            <text class="rigv-dur">{{item.dur}}</text>
           </view>
           <text class="rigv-desc small muted">{{item.desc}}</text>
         </view>
+        <view class="rigv-link">复制链接</view>
       </view>
     </block>
+  </view>
+
+  <!-- 引导在浏览器打开：点击视频条目后弹出，明确指引去浏览器粘贴 -->
+  <view class="guide-mask" wx:if="{{guide.show}}" bindtap="closeGuide">
+    <view class="guide-card" catchtap="stop">
+      <text class="guide-h">在浏览器中打开</text>
+      <text class="guide-sub">点击下方「复制链接」，再打开手机浏览器，把链接粘贴到地址栏，即可观看《{{guide.title}}》原视频（外部平台，非本程序托管）</text>
+      <view class="guide-url"><text class="guide-url-t" selectable="true">{{guide.url}}</text></view>
+      <view class="guide-btns">
+        <view class="guide-btn ghost" bindtap="closeGuide">取消</view>
+        <view class="guide-btn primary" bindtap="copyFromGuide">复制链接</view>
+      </view>
+    </view>
   </view>
 </view>

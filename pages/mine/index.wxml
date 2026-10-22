@@ -38,7 +38,7 @@
     </view>
     <view class="entry" bindtap="toggleTheme">
       <text class="ico">{{themeIcon}}</text>
-      <view class="eb"><text class="nm">外观</text><text class="small muted">当前{{themeName}}模式，点击切换</text></view>
+      <view class="eb"><text class="nm">外观</text><text class="small muted">{{themeName}}，点击设置</text></view>
       <view class="tk {{themeLight ? 'on' : ''}}"><view class="knob"></view></view>
     </view>
     <view class="entry" data-url="/pages/sync/index" bindtap="go">
