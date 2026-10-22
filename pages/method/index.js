@@ -15,7 +15,7 @@ Page(TH.mix({
       nodes: H.toNodes(m.body)
     }));
 
-    // 视频按 cat 分类分组；_i 记录在 RIG_VIDEOS 里的原始下标，跳播放页用
+    // 视频按 cat 分类分组（仅用于展示清单；个人主体不开放视频类目，不再跳转播放页）
     const vgroups = [];
     D.RIG_VIDEOS.forEach((v, i) => {
       let g = vgroups.find(x => x.cat === v.cat);
@@ -30,10 +30,5 @@ Page(TH.mix({
     const i = e.currentTarget.dataset.i;
     const key = "list[" + i + "].open";
     this.setData({ [key]: !this.data.list[i].open });
-  },
-
-  // 列表不放原生 video（避免同页多个播放器），跳独立播放页
-  playVideo(e) {
-    wx.navigateTo({ url: "/pages/rigvideo/index?i=" + e.currentTarget.dataset.i });
   }
 }));

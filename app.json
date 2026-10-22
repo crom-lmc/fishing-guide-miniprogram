@@ -15,8 +15,7 @@
     "pages/spot/index",
     "pages/poster/index",
     "pages/stats/index",
-    "pages/rules/index",
-    "pages/rigvideo/index"
+    "pages/rules/index"
   ],
   "window": {
     "navigationBarBackgroundColor": "#12141C",
