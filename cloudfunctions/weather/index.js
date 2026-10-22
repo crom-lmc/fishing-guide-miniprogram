@@ -398,6 +398,8 @@ function tencentPlace(lat, lng, radius, keyword) {
     return (j.data || []).map((p) => ({
       name: p.title || "",
       type: String(p.category || "").split(":").pop() || "POI",
+      // 完整分类（如「地名地址:自然地名:湖泊」「美食:火锅」）—— 上层靠它把餐饮/公司/美发过滤掉
+      cat: p.category || "",
       lat: p.location && p.location.lat,
       lng: p.location && p.location.lng,
       dist: typeof p._distance === "number" ? p._distance : null
@@ -505,6 +507,10 @@ function dedupe(list) {
   return out;
 }
 
+// 附近检索结果缓存（同实例内有效）
+const NEARBY_TTL = 10 * 60 * 1000;
+const _nearbyCache = {};
+
 async function nearby(lat, lng, radius, mode, coordType) {
   // 与逆地理编码同一套坐标规则：腾讯搜索要 GCJ02，OSM/Overpass 要 WGS84。
   // 返回给客户端时统一换成 GCJ02 —— 小程序地图是按 GCJ02 画的，直接把 OSM 的 WGS84 坐标丢上去
@@ -513,10 +519,21 @@ async function nearby(lat, lng, radius, mode, coordType) {
   const w = fromWgs ? { lat: lat, lng: lng } : gcj2wgs(lat, lng);
   const g = fromWgs ? wgs2gcj(lat, lng) : { lat: lat, lng: lng };
 
+  // 同位置/半径/模式 10 分钟内复用。附近检索一次要打 3 个关键词 = 3 次腾讯调用，
+  // 反复点「查附近水域」、切半径、来回切页都会重复扣额度（个人开发者「地点搜索」仅 200 次/天）。
+  const nk = mode + "|" + Math.round(radius) + "|" + Number(lat).toFixed(3) + "," + Number(lng).toFixed(3);
+  const hit = _nearbyCache[nk];
+  if (hit && Date.now() - hit.t < NEARBY_TTL) return hit.v;
+
   let list = [], source = "osm", dbg = {};
   if (TENCENT_KEY) {
     source = "tencent";
-    const kws = mode === "water" ? ["水库", "湖", "河"] : ["钓场", "钓鱼"];
+    // 关键词必须是「词」不能是单字：实测 keyword=湖 会把「天朗·御湖」小区里的火锅店/美发店/诊所
+    // 全捞出来（店名带"湖"），keyword=河 会捞到「长之河工程有限公司」。
+    // 下面这组是实测能精准命中水体的：水库 / 湖泊 / 湿地；钓点用 钓场 / 垂钓 / 鱼塘。
+    // 「河流」是查河的关键词：实测 keyword=河流 返回的 20 条全是「地名地址:自然地名:河流」
+    // （渭河/皂河/幸福渠/未央湖…）；而单字 keyword=河 只会捞到「长之河工程有限公司」这类商户。
+    const kws = mode === "water" ? ["水库", "湖泊", "河流", "湿地"] : ["钓场", "垂钓", "鱼塘"];
     const arrs = await Promise.all(kws.map((k) => tencentPlace(g.lat, g.lng, radius, k)
       .catch((e) => { dbg["err_" + k] = e.message; return []; })));
     list = arrs.reduce((a, b) => a.concat(b), []);
@@ -533,6 +550,30 @@ async function nearby(lat, lng, radius, mode, coordType) {
       })));
     }
   }
+
+  // ---- 按 POI 分类收口（关键修复）----
+  // 腾讯 place/search 的 keyword 是「名称包含」匹配，不是分类检索，所以必须再按 category 过滤：
+  //   水域：只认「地名地址:自然地名:*」（湖泊/河流）与「旅游景点:*」（水库风景区/湿地公园）；
+  //   钓点：只认「垂钓园」这类；
+  //   餐饮/购物/医疗/公司企业/教育/酒店/美发等商户一律丢弃（就是它们把「附近水域」变成大众点评的）。
+  if (source === "tencent") {
+    const BAD_CAT = /(美食|购物|医疗|生活服务|公司企业|教育学校|房地产|酒店|住宿|汽车|金融|政府|机构|工厂|农林牧渔|交通设施|商务|写字楼)/;
+    const BAD_NAME = /(售卖机|停车场|售票|入口|出口|卫生间|厕所|服务中心|游客中心|检票|管理处|派出所|公交|地铁|超市|便利店|餐厅|火锅|面馆|酒吧|茶舍)/;
+    const WATER_CAT = /^(地名地址:自然地名|旅游景点)/;
+    const SPOT_CAT = /(垂钓|钓场|鱼塘|钓鱼)/;
+    list = list.filter((x) => {
+      const cat = x.cat || "";
+      const nm = x.name || "";
+      if (BAD_NAME.test(nm)) return false;
+      if (mode === "water") {
+        if (BAD_CAT.test(cat)) return false;
+        return WATER_CAT.test(cat);
+      }
+      // 钓点：垂钓园/钓场才留下
+      return SPOT_CAT.test(cat);
+    });
+  }
+
   const seen = {};
   list = dedupe(list)
     .filter((x) => x.dist == null || x.dist <= radius * 1.05)
@@ -556,10 +597,14 @@ async function nearby(lat, lng, radius, mode, coordType) {
   const merged = [];
   list.forEach((x) => {
     if (!x.name) { merged.push(x); return; }
-    const g = byName[x.name];
+    // 景区内的子设施（「浐灞湿地公园-碰碰车」「-果园」「-生命之林」）按父级名称合并成一个，
+    // 否则一个公园会刷出十几条游乐设施，把真正的钓点挤下去。
+    const base = (x.name.split(/[-—－]/)[0] || "").trim() || x.name;
+    x.name = base;
+    const g = byName[base];
     if (g) { g.seg += 1; return; }
     x.seg = 1;
-    byName[x.name] = x;
+    byName[base] = x;
     merged.push(x);
   });
   list = merged.slice(0, 30);
@@ -573,26 +618,37 @@ async function nearby(lat, lng, radius, mode, coordType) {
   }
   dbg.total = list.length;
   dbg.merged = merged.length;
-  return { ok: true, v: 2, source: source, list: list, dbg: dbg };
+  const out = { ok: true, v: 4, source: source, list: list, dbg: dbg };
+  _nearbyCache[nk] = { t: Date.now(), v: out };
+  return out;
 }
 
 exports.main = async (event) => {
   // ---- 附近水域 / 钓场检索 ----
   if (event && event.action === "nearby") {
     const nlat = parseFloat(event.lat), nlng = parseFloat(event.lng);
-    if (!isFinite(nlat) || !isFinite(nlng)) return { ok: false, v: 2, msg: "坐标缺失" };
+    if (!isFinite(nlat) || !isFinite(nlng)) return { ok: false, v: 4, msg: "坐标缺失" };
     const radius = Math.min(30000, Math.max(500, parseFloat(event.radius) || 3000));
     const mode = event.mode === "spot" ? "spot" : "water";
     try {
       return await nearby(nlat, nlng, radius, mode, event.coordType === "wgs84" ? "wgs84" : "gcj02");
     } catch (e) {
       return {
-        ok: false, v: 2,
+        ok: false, v: 4,
         reason: String(e.message || "").slice(0, 160),
         msg: "附近 POI 暂不可用：免 key 的 OpenStreetMap 数据源在国内网络基本连不上（已试 3 个镜像，全部超时）。"
           + "请到 lbs.qq.com 免费申请一个 key，在云开发控制台给本函数加环境变量 TENCENT_MAP_KEY，然后重新部署。"
       };
     }
+  }
+
+  // ---- 只查地名（附近页状态行显示「这是哪儿」）----
+  // 不拉天气数据，只走逆地址解析；复用 fetchPlace 的地名缓存，重复拖动基本不耗额度。
+  if (event && event.action === "place") {
+    const plat = parseFloat(event.lat), plng = parseFloat(event.lng);
+    if (!isFinite(plat) || !isFinite(plng)) return { ok: false, v: 4, msg: "坐标缺失" };
+    const r = await fetchPlace(plat, plng, event.coordType === "wgs84" ? "wgs84" : "gcj02");
+    return { ok: true, v: 4, place: (r && r.place) || "", tencent_err: (r && r.tencentErr) || "" };
   }
 
   const lat = parseFloat(event.lat), lng = parseFloat(event.lng);

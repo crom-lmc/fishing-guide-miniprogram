@@ -1,18 +1,36 @@
-/* 定位状态行 + 手动定位按钮 */
+/* 地图：和下方状态行留出间距，避免原生 map 层在滚动时吃掉按钮点击 */
+.map {
+  display: block;
+  border-radius: 20rpx;
+  margin-bottom: 16rpx;
+}
+
+/* 定位状态行 + 手动定位按钮（整行可点） */
 .grow {
   display: flex;
   align-items: center;
   gap: 16rpx;
-  padding: 14rpx 4rpx 0;
+  padding: 16rpx 4rpx;
 }
-.gtxt {
+.gcol {
   flex: 1;
   min-width: 0;
+}
+.gtxt {
+  display: block;
   font-size: 22rpx;
   line-height: 1.45;
   color: var(--a2);
 }
 .gtxt.warn { color: var(--warn); }
+/* 当前查询中心的地名（"这是哪儿"），比坐标好认 */
+.gplace {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 24rpx;
+  line-height: 1.4;
+  color: var(--tx);
+}
 .gbtn {
   flex-shrink: 0;
   font-size: 22rpx;

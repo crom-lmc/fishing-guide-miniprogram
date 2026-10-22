@@ -29,6 +29,7 @@ Page(TH.mix({
   data: {
     lat: 34.3416, lng: 108.9398,     // 西安默认中心，定位成功后回填
     geoMsg: "",
+    placeName: "",                    // 当前中心的地名（"这是哪儿"），由逆地址解析回填
     locating: false,
     located: false,                   // 是否已拿到真实坐标（决定提示文案）
     radius: 8000,
@@ -56,6 +57,11 @@ Page(TH.mix({
     if (this.data.list && this.data.list.length) this.syncMarkers();
   },
 
+  onUnload() {
+    clearTimeout(this._wd);
+    clearTimeout(this._hard);
+  },
+
   // 手动定位按钮
   onLocateTap() {
     this.locate(false);
@@ -74,19 +80,21 @@ Page(TH.mix({
     });
 
     const ctx = wx.createMapContext("nearMap", this);
-    // 兜底：8 秒还没结果就把状态说清楚，避免一直转「定位中」
+    // 最后兜底：10 秒还没结果就把状态说清楚，避免一直转「定位中」
     clearTimeout(this._wd);
     this._wd = setTimeout(() => {
       if (this.data.locating) {
         this.setData({
           locating: false,
-          geoMsg: "定位超时。请点「重新定位」，或直接把地图拖到你现在的位置再查询"
+          geoMsg: "定位超时。开发者工具请打开工具栏的「位置模拟」；真机请确认允许位置权限。也可把地图拖到目标位置后直接查询"
         });
+        this.fuzzyFallback();
       }
-    }, 8000);
+    }, 10000);
 
     const fail = (why) => {
       clearTimeout(this._wd);
+      clearTimeout(this._hard);
       this.setData({
         locating: false,
         geoMsg: (why || "定位不可用") + "。可拖动地图到目标位置，或点「重新定位」"
@@ -94,6 +102,19 @@ Page(TH.mix({
     };
 
     const move = () => {
+      let started = false;
+      // 只生效一次：success 回调与兜底定时器谁先到用谁，不重复读
+      const beginRead = (delay) => {
+        if (started) return;
+        started = true;
+        clearTimeout(this._hard);
+        setTimeout(() => this.readCenter(0), delay);
+      };
+      // 总兜底：getCenterLocation / moveToLocation 任一回调不回来时（开发者工具没开
+      // 「位置模拟」最常见，低端机首次授权后也会），4.5 秒后强行开始读中心，
+      // 不再干等到 8 秒超时。地图若真移动过，读到的就是新位置。
+      clearTimeout(this._hard);
+      this._hard = setTimeout(() => beginRead(0), 4500);
       // 先记下移动前的中心，用于判断「地图到底动没动」
       ctx.getCenterLocation({
         success: (c) => { this._from = c; },
@@ -101,7 +122,7 @@ Page(TH.mix({
         complete: () => {
           try {
             ctx.moveToLocation({
-              success: () => setTimeout(() => this.readCenter(0), 600),
+              success: () => beginRead(600),
               fail: () => fail("定位失败，可能未获得位置授权")
             });
           } catch (e) {
@@ -130,6 +151,7 @@ Page(TH.mix({
   applyCenter(c, src) {
     if (!c || c.latitude == null) return;
     clearTimeout(this._wd);
+    clearTimeout(this._hard);
     this._last = null;
 
     const f = this._from;
@@ -137,22 +159,75 @@ Page(TH.mix({
       && Math.abs(f.latitude - c.latitude) < 1e-6
       && Math.abs(f.longitude - c.longitude) < 1e-6;
     const where = c.latitude.toFixed(5) + "°N, " + c.longitude.toFixed(5) + "°E";
+    // 中心仍停在本页写死的默认点（西安市中心）＝ 根本没取到真实位置，
+    // 不能再自称「已精确定位」，否则用户会误以为定到了自己身上。
+    const isDefault = Math.abs(c.latitude - 34.3416) < 1e-4 && Math.abs(c.longitude - 108.9398) < 1e-4;
+    const ok = src === "locate" && !notMoved && !isDefault;
+    if (ok) this._locatedOnce = true;
 
     this.setData({
       locating: false,
-      located: true,
+      located: !!this._locatedOnce,
       lat: c.latitude,
       lng: c.longitude,
       geoMsg: src === "locate"
-        ? (notMoved ? "定位未生效（地图中心没变），可拖动地图或点「重新定位」" : "已精确定位 · " + where)
-        : "查询中心 " + where + "（点「重新定位」回到我的位置）"
+        ? (notMoved
+            ? "定位未生效（地图中心没变），可拖动地图或点「重新定位」"
+            : (isDefault
+                ? "没取到你的位置（当前是默认中心）。请在开发者工具打开「位置模拟」，或真机检查位置权限"
+                : "已精确定位 · " + where))
+        : (this._locatedOnce
+            ? "查询中心 " + where + "（点「重新定位」回到我的位置）"
+            : "查询中心 " + where + "（尚未取到你的位置，请检查位置权限 / 开发者工具「位置模拟」）")
     });
 
-    // 首次定位成功后自动查一次附近水域，省一次点击
-    if (src === "locate" && !this._autoQueried) {
+    // 顺手把「这是哪儿」查出来显示（只看坐标看不出地方）
+    this.fetchPlaceName(c.latitude, c.longitude);
+
+    // 只有真的拿到精确定位才自动查一次，避免在默认中心上瞎查
+    if (ok && !this._autoQueried) {
       this._autoQueried = true;
       this.search();
     }
+  },
+
+  // 查当前中心的地名（腾讯逆地址解析）。失败就只保留坐标，不影响其它功能。
+  // 按 100m 网格去重，拖动地图时不会每动一下就请求一次。
+  fetchPlaceName(lat, lng) {
+    const k = Number(lat).toFixed(3) + "," + Number(lng).toFixed(3);
+    if (this._placeKey === k) return;
+    this._placeKey = k;
+    if (!wx.cloud || !wx.cloud.callFunction) return;
+    wx.cloud.callFunction({
+      name: "weather",
+      data: { action: "place", lat: lat, lng: lng, coordType: "gcj02" },
+      success: (r) => {
+        const d = (r && r.result) || {};
+        if (!d.ok || !d.place) return;
+        if (this._placeKey !== k) return;   // 期间又拖走了，别回填旧地名
+        this.setData({ placeName: d.place });
+      },
+      fail: () => {}
+    });
+  },
+
+  // 精确定位彻底失败时的兜底：用微信模糊定位拿一个城市级坐标，至少让页面能查
+  fuzzyFallback() {
+    if (!wx.getFuzzyLocation) return;
+    wx.getFuzzyLocation({
+      type: "gcj02",
+      success: (p) => {
+        if (this._locatedOnce) return;   // 已经拿到精确定位，别用模糊的覆盖
+        this.setData({
+          lat: p.latitude,
+          lng: p.longitude,
+          located: false,
+          locating: false,
+          geoMsg: "只取到模糊定位（城市级），可能偏差几公里。请拖动地图校准，或点「重新定位」"
+        });
+      },
+      fail: () => {}
+    });
   },
 
   // 连续读中心，两次差 <1e-5（≈1m）才认，避免读到定位动画的中间帧
@@ -175,11 +250,14 @@ Page(TH.mix({
         // 定位动画期间 getCenterLocation 常会失败；regionchange 若带回 centerLocation 就直接用
         if (this._evtCenter) return this.applyCenter(this._evtCenter, "locate");
         if (n < 4) return setTimeout(() => this.readCenter(n + 1), 300);
+        // 之前某一轮已经读成功过，就用那次结果，别把拿到的坐标丢掉
+        if (this._last) return this.applyCenter(this._last, "locate");
         clearTimeout(this._wd);
         this.setData({
           locating: false,
-          geoMsg: "地图已移到定位位置，但没取到中心坐标。手动拖动一下地图就能继续查询。"
+          geoMsg: "没取到地图中心。请确认已允许位置权限、开发者工具已打开「位置模拟」，或拖动地图后直接查询。"
         });
+        this.fuzzyFallback();
       }
     });
   },

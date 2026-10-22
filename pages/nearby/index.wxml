@@ -8,9 +8,14 @@
        scale="13" show-location bindregionchange="onRegionChange"
        style="width:100%;height:440rpx"></map>
 
-  <view class="grow">
-    <text class="gtxt {{located ? '' : 'warn'}}">{{geoMsg || '尚未取得坐标'}}</text>
-    <view class="gbtn {{locating ? 'dis' : ''}}" bindtap="onLocateTap">{{locating ? '定位中…' : '📍 重新定位'}}</view>
+  <!-- 整行可点：地图是原生组件，按钮贴着地图下沿时小按钮容易被原生层吃掉点击，
+       把点击区扩大到整行，按钮只负责"看起来能点" -->
+  <view class="grow" bindtap="onLocateTap">
+    <view class="gcol">
+      <text class="gtxt {{located ? '' : 'warn'}}">{{geoMsg || '尚未取得坐标'}}</text>
+      <text class="gplace" wx:if="{{placeName}}">📍 {{placeName}}</text>
+    </view>
+    <view class="gbtn {{locating ? 'dis' : ''}}">{{locating ? '定位中…' : '📍 重新定位'}}</view>
   </view>
 
   <!-- 附近水域 -->
