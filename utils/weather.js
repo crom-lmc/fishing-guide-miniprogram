@@ -6,7 +6,9 @@
 const S = require("./score.js");
 
 // 返回 { weather: <Open-Meteo JSON>, place: "陕西省西安市未央区" }；失败都 reject
-function fetchAll(lat, lng) {
+// coordType：本项目客户端拿到的坐标都是 GCJ02（地图组件中心 / chooseLocation / getFuzzyLocation 均取 gcj02），
+// 传下去让云函数在查境外数据源前转 WGS84 —— 不转会整体偏 400~500m，逆地理编码就落到隔壁厂区了。
+function fetchAll(lat, lng, coordType) {
   return new Promise((resolve, reject) => {
     if (!wx.cloud || !wx.cloud.callFunction) {
       reject(new Error("当前微信版本不支持云开发，请手动填写。"));
@@ -14,7 +16,7 @@ function fetchAll(lat, lng) {
     }
     wx.cloud.callFunction({
       name: "weather",
-      data: { lat: lat, lng: lng },
+      data: { lat: lat, lng: lng, coordType: coordType || "gcj02" },
       success: (r) => {
         const d = (r && r.result) || {};
         if (d.ok && d.weather && d.weather.current) {

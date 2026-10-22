@@ -5,6 +5,7 @@ const T = require("../../utils/target.js");
 const M = require("../../utils/moon.js");
 const SUN = require("../../utils/sun.js");
 const TH = require("../../utils/theme.js");
+const PL = require("../../utils/place.js");
 const app = getApp();
 
 const WEATHER = [
@@ -475,16 +476,21 @@ Page(TH.mix({
   // 自动定位只能给到 GPS 坐标 + 省市区地名。
   pickLocation() {
     if (this.data.geoLoading) return;
+    // 故意不传 latitude / longitude：
+    //   传了的话绿钉会落在「上一次算出来的坐标」上，而蓝点是系统 GPS 的真实位置，
+    //   两者来源不同（地图定位偏网络/基站，选点页用系统 GPS），就差出几十米，看着像“没在一起”。
+    //   不传则默认以当前真实位置为中心，绿钉与蓝点重合，符合“进来就在我这儿”的直觉。
     wx.chooseLocation({
-      latitude: this.data.lat,
-      longitude: this.data.lng,
       success: (r) => {
         const lat = r.latitude, lng = r.longitude;
         const place = r.name || r.address || "";
+        // 记住这个 POI 名：以后自动定位落在这附近（300m 内）就直接复用，
+        // 这样「广联达西安数字建筑研发大厦 / 凯瑞H座」这种楼名不会被 OSM 逆地理带偏
+        PL.savePicked(lat, lng, r.name || "");
         const tk = (this._geoToken = (this._geoToken || 0) + 1);
         this.setData({ lat: lat, lng: lng, geoMsg: "已选点，正在获取实时天气…", geoLoading: true });
         this.armWatchdog(tk, 10, "天气获取超时，请稍后重试或直接手动填参数。");
-        W.fetchAll(lat, lng).then((res) => {
+        W.fetchAll(lat, lng, "gcj02").then((res) => {
           if (this._geoToken !== tk) return;
           clearTimeout(this._geoTimer);
           this.hourly = res.weather.hourly || null;
@@ -495,7 +501,7 @@ Page(TH.mix({
             geoReady: true,
             geoLoading: false,
             geoMsg: "已填入实时天气（" + (place ? place + "，" : "")
-              + lat.toFixed(3) + "°N, " + lng.toFixed(3) + "°E）"
+              + lat.toFixed(4) + "°N, " + lng.toFixed(4) + "°E）"
           });
         }).catch((e) => {
           if (this._geoToken !== tk) return;
@@ -529,8 +535,10 @@ Page(TH.mix({
         reject(new Error("当前微信版本不支持定位，请手动填写。"));
         return;
       }
+      // 统一取 gcj02：地图组件中心、chooseLocation 都是 gcj02，坐标体系必须一致，
+      // 否则「精确定位」和「地图选点」两条路径的坐标互相偏 400~500m，逆地理编码直接跑偏
       wx.getFuzzyLocation({
-        type: "wgs84",
+        type: "gcj02",
         success: (pos) => resolve({ lat: pos.latitude, lng: pos.longitude, fuzzy: true }),
         fail: reject
       });
@@ -565,12 +573,15 @@ Page(TH.mix({
         this.setData({ geoMsg: "已定位，正在获取实时天气…" });
         // 一次云函数调用同时拿天气和地名（Open-Meteo/BigDataCloud 均无备案域名，只能走云函数代理）；
         // 地名取不到只影响展示（降级为只显示坐标），不影响天气填入
-        return W.fetchAll(p.lat, p.lng).then((r) => ({ j: r.weather, p: p, place: r.place }));
+        return W.fetchAll(p.lat, p.lng, "gcj02").then((r) => ({ j: r.weather, p: p, place: r.place }));
       })
       .then((r) => {
         if (!r || this._geoToken !== tk) return;
         clearTimeout(this._geoTimer);
-        const j = r.j, p = r.p, place = r.place;
+        const j = r.j, p = r.p;
+        // 手动选过点且当前就在附近 → 用当时那个楼名。腾讯 POI 才有「广联达西安数字建筑研发大厦 /
+        // 凯瑞H座」这种楼名；OSM 逆地理在这种写字楼片区只能给到「某某管委会 / 某某产业园」。
+        const place = PL.nearbyName(p.lat, p.lng, 300) || r.place;
         // 逐时数据留着画未来 24 小时曲线（列式：time / temperature_2m / pressure_msl / ...）
         this.hourly = j.hourly || null;
         const f = W.toParams(j.current, this.data.f.se, this.data.f.wt);

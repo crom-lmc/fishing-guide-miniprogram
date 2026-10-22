@@ -4,6 +4,7 @@ const D = require("../../data/fishing-data.js");
 const C = require("../../utils/config.js");
 const V = require("../../utils/vision.js");
 const W = require("../../utils/weather.js");
+const PL = require("../../utils/place.js");
 const TH = require("../../utils/theme.js");
 
 function today() {
@@ -136,11 +137,11 @@ Page(TH.mix({
       });
   },
 
-  // 坐标 → 中文地名（走云函数 weather 的逆地理编码）；失败返回空串
+  // 坐标 → 中文地名（走云函数 weather 的逆地理编码）；失败退回「手动选点缓存」的楼名
   placeOf(lat, lng) {
-    return W.fetchAll(lat, lng)
-      .then((d) => (d && d.place) || "")
-      .catch(() => "");
+    return W.fetchAll(lat, lng, "gcj02")
+      .then((d) => (d && d.place) || PL.nearbyName(lat, lng, 300) || "")
+      .catch(() => PL.nearbyName(lat, lng, 300) || "");
   },
 
   // 静默定位：精确优先，拿不到再退模糊定位（都不弹页）
@@ -220,6 +221,8 @@ Page(TH.mix({
   pickSpotByMap() {
     wx.chooseLocation({
       success: (r) => {
+        // 记住这个 POI 名：回到「静默定位」路径时，落在附近就直接复用（OSM 逆地理没有楼名）
+        PL.savePicked(r.latitude, r.longitude, r.name || "");
         this.setData({
           "form.spot": r.name || r.address || "已选钓点",
           "form.lat": r.latitude,
@@ -273,7 +276,7 @@ Page(TH.mix({
       app.set(app.KEYS.TIMER, cur);
       this.setData({ timer: cur });
 
-      return W.fetchAll(r.lat, r.lng).then((d) => {
+      return W.fetchAll(r.lat, r.lng, "gcj02").then((d) => {
         const c = (d.weather && d.weather.current) || {};
         const cur2 = this.data.timer;
         if (!cur2.on) return;

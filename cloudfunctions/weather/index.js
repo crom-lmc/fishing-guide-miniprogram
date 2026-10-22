@@ -11,6 +11,53 @@ const https = require("https");
 // 在云开发控制台 → 本函数 → 配置 → 环境变量里加 TENCENT_MAP_KEY 即可，不配也能跑（走免 key 方案）。
 const TENCENT_KEY = process.env.TENCENT_MAP_KEY || "";
 
+// ===== 坐标系换算（本次修复的根因）=====
+// 小程序侧拿到的坐标全部是 GCJ02（火星坐标）：地图组件 moveToLocation 后的中心、chooseLocation 返回值。
+// 而 Open-Meteo / BigDataCloud / Photon(OSM) 全部按 WGS84 理解坐标，直接喂 GCJ02 会整体偏移。
+// 实测西安（34.3618,108.9290）：GCJ02→WGS84 差 459m，逆地理编码会解析到隔壁厂区
+// 「华润雪花啤酒(西安)分公司」，而不是所在的「经开区·明光路·广联达/凯瑞」一带。
+// 腾讯位置服务反过来只认 GCJ02，所以只在调用境外数据源前转换。
+const PI = Math.PI, GCJ_A = 6378245.0, GCJ_EE = 0.00669342162296594323;
+
+function outOfChina(lat, lng) {
+  return lng < 72.004 || lng > 137.8347 || lat < 0.8293 || lat > 55.8271;
+}
+function gcjTLat(x, y) {
+  let r = -100 + 2 * x + 3 * y + 0.2 * y * y + 0.1 * x * y + 0.2 * Math.sqrt(Math.abs(x));
+  r += (20 * Math.sin(6 * x * PI) + 20 * Math.sin(2 * x * PI)) * 2 / 3;
+  r += (20 * Math.sin(y * PI) + 40 * Math.sin(y / 3 * PI)) * 2 / 3;
+  r += (160 * Math.sin(y / 12 * PI) + 320 * Math.sin(y * PI / 30)) * 2 / 3;
+  return r;
+}
+function gcjTLng(x, y) {
+  let r = 300 + x + 2 * y + 0.1 * x * x + 0.1 * x * y + 0.1 * Math.sqrt(Math.abs(x));
+  r += (20 * Math.sin(6 * x * PI) + 20 * Math.sin(2 * x * PI)) * 2 / 3;
+  r += (20 * Math.sin(x * PI) + 40 * Math.sin(x / 3 * PI)) * 2 / 3;
+  r += (150 * Math.sin(x / 12 * PI) + 300 * Math.sin(x / 30 * PI)) * 2 / 3;
+  return r;
+}
+function gcjDelta(lat, lng) {
+  let dLat = gcjTLat(lng - 105, lat - 35);
+  let dLng = gcjTLng(lng - 105, lat - 35);
+  const radLat = lat / 180 * PI;
+  let magic = Math.sin(radLat);
+  magic = 1 - GCJ_EE * magic * magic;
+  const sq = Math.sqrt(magic);
+  dLat = (dLat * 180) / ((GCJ_A * (1 - GCJ_EE)) / (magic * sq) * PI);
+  dLng = (dLng * 180) / (GCJ_A / sq * Math.cos(radLat) * PI);
+  return { dLat: dLat, dLng: dLng };
+}
+function gcj2wgs(lat, lng) {
+  if (outOfChina(lat, lng)) return { lat: lat, lng: lng };
+  const d = gcjDelta(lat, lng);
+  return { lat: lat - d.dLat, lng: lng - d.dLng };
+}
+function wgs2gcj(lat, lng) {
+  if (outOfChina(lat, lng)) return { lat: lat, lng: lng };
+  const d = gcjDelta(lat, lng);
+  return { lat: lat + d.dLat, lng: lng + d.dLng };
+}
+
 function get(url, timeout) {
   return new Promise((resolve, reject) => {
     const u = new URL(url);
@@ -109,19 +156,33 @@ function compose(d) {
 // 注意：Photon 不支持 lang=zh（带上直接 400），不带参数反而返回中文原名。
 function photonPlace(lat, lng) {
   return get("https://photon.komoot.io/reverse?lat=" + lat.toFixed(5)
-    + "&lon=" + lng.toFixed(5) + "&limit=5", 6000)
+    + "&lon=" + lng.toFixed(5) + "&limit=8", 6000)
     .then((j) => {
       const arr = (j && j.features) || [];
+      const cand = [];
       for (let i = 0; i < arr.length; i++) {
         const p = arr[i].properties || {};
         const nm = t2s(String(p.name || "").trim());
         if (!nm || nm === "中国" || nm === "中华人民共和国") continue;
         // 省/市/区县这级太粗，留给 BigDataCloud，这里只要更细的
         const k = p.osm_key || "", v = p.osm_value || "";
-        if (k === "place" && /^(country|state|county|city|town|district)$/.test(v)) continue;
-        return nm;
+        if (k === "place" && /^(country|state|county|city|town|district|suburb)$/.test(v)) continue;
+        const c = arr[i].geometry && arr[i].geometry.coordinates;
+        if (!c || c.length < 2) continue;
+        const d = Math.round(haversine(lat, lng, c[1], c[0]));
+        if (d > 400) continue;                    // 400m 之外的“最近地名”没有参考价值
+        // 权重：楼宇/园区/商业/公共服务最有用；工厂、工业用地、道路、交通设施都不是“你在哪”
+        let w;
+        if (/^(building|office|amenity|shop|tourism|leisure|healthcare|education)$/.test(k)) w = 3;
+        else if (k === "landuse" || k === "man_made") w = (v === "industrial" || v === "works") ? -2 : 0;
+        else if (/^(highway|railway|public_transport|route)$/.test(k)) w = -3;
+        else w = 1;
+        cand.push({ nm: nm, d: d, w: w });
       }
-      return "";
+      if (!cand.length) return "";
+      // 先按权重（楼名优先），同权重再按距离近的
+      cand.sort((a, b) => (b.w - a.w) || (a.d - b.d));
+      return cand[0].nm;
     })
     .catch(() => "");
 }
@@ -130,7 +191,7 @@ function photonPlace(lat, lng) {
 // 返回省市区 + 街道门牌 + 最近地标，是国内数据里唯一能稳定到门牌级的。
 function tencentGeocode(lat, lng) {
   return get("https://apis.map.qq.com/ws/geocoder/v1/?location=" + lat + "," + lng
-    + "&key=" + TENCENT_KEY + "&get_poi=0", 6000)
+    + "&key=" + TENCENT_KEY + "&get_poi=1", 6000)
     .then((j) => {
       if (!j || j.status !== 0) throw new Error((j && j.message) || "腾讯逆地址解析异常");
       const r = j.result || {};
@@ -145,33 +206,58 @@ function tencentGeocode(lat, lng) {
       push(ac.province);
       push(ac.city);
       push(ac.district);
-      let out = parts.join("");
-      const st = t2s(String(ac.street || "").trim());
-      const sn = t2s(String(ac.street_number || "").trim());
-      if (st) {
-        out += "·" + st + sn;
-      } else {
-        // 没解析出街道时，用 1km 内最近的地标补一个参照物
-        const lm = (r.landmarks || [])[0];
-        if (lm && lm.title) out += "·" + t2s(String(lm.title));
+      const out = parts.join("");
+      const norm = (v) => t2s(String(v == null ? "" : v).trim());
+
+      // 楼名优先：get_poi=1 返回的周边 POI 是唯一能拿到「广联达西安数字建筑研发大厦 / 凯瑞H座」
+      // 这类具体楼名的来源（OSM / BigDataCloud 国内没有这样的覆盖）。只认 300m 内的，远了就是别人的楼。
+      const pois = (r.pois || []).slice().sort((a, b) => {
+        const da = a && typeof a._distance === "number" ? a._distance : 9999;
+        const db = b && typeof b._distance === "number" ? b._distance : 9999;
+        return da - db;
+      });
+      for (let i = 0; i < pois.length; i++) {
+        const p0 = pois[i] || {};
+        const d = typeof p0._distance === "number" ? p0._distance : 9999;
+        if (d > 300) break;                      // 已按距离升序，后面只会更远
+        const t = norm(p0.title);
+        if (t) return out + "·" + t;
       }
+
+      // 其次用腾讯自己给的「推荐地址」（往往是楼名 / 小区名）
+      const fa = r.formatted_addresses || {};
+      const rec = norm(fa.recommend);
+      let dup = false;
+      for (let i = 0; i < parts.length; i++) if (parts[i] && rec.indexOf(parts[i]) >= 0) dup = true;
+      if (rec && rec !== out && !dup) return out + "·" + rec;
+
+      const st = norm(ac.street), sn = norm(ac.street_number);
+      if (st) return out + "·" + st + sn;
+      const lm = (r.landmarks || [])[0];
+      if (lm && lm.title) return out + "·" + norm(lm.title);
       return out;
     });
 }
 
-function fetchPlace(lat, lng) {
-  // 1) 腾讯：最准，但要自己申请 key
+function fetchPlace(lat, lng, coordType) {
+  // 调用方默认给 GCJ02（小程序地图/chooseLocation 都是这套），境外数据源要先转 WGS84；
+  // 腾讯位置服务反过来只认 GCJ02，两者各用各的坐标，不能混。
+  const fromWgs = coordType === "wgs84";
+  const w = fromWgs ? { lat: lat, lng: lng } : gcj2wgs(lat, lng);
+  const g = fromWgs ? wgs2gcj(lat, lng) : { lat: lat, lng: lng };
+
+  // 1) 腾讯：最准，但要自己申请 key（能到楼名 / 门牌）
   const viaTencent = TENCENT_KEY
-    ? tencentGeocode(lat, lng).catch(() => "")
+    ? tencentGeocode(g.lat, g.lng).catch(() => "")
     : Promise.resolve("");
 
-  // 2) 免 key 兜底：BigDataCloud 出省市区，Photon 出小区/路名，两个并行
+  // 2) 免 key 兜底：BigDataCloud 出省市区，Photon 出小区/楼名，两个并行（都按 WGS84 查）
   const viaBD = get("https://api.bigdatacloud.net/data/reverse-geocode-client"
-    + "?latitude=" + lat.toFixed(5) + "&longitude=" + lng.toFixed(5)
+    + "?latitude=" + w.lat.toFixed(5) + "&longitude=" + w.lng.toFixed(5)
     + "&localityLanguage=zh", 8000)
     .then(compose)
     .catch(() => "");
-  const viaPhoton = photonPlace(lat, lng);
+  const viaPhoton = photonPlace(w.lat, w.lng);
 
   return Promise.all([viaTencent, viaBD, viaPhoton]).then((r) => {
     if (r[0]) return r[0];
@@ -314,16 +400,23 @@ function dedupe(list) {
   return out;
 }
 
-async function nearby(lat, lng, radius, mode) {
+async function nearby(lat, lng, radius, mode, coordType) {
+  // 与逆地理编码同一套坐标规则：腾讯搜索要 GCJ02，OSM/Overpass 要 WGS84。
+  // 返回给客户端时统一换成 GCJ02 —— 小程序地图是按 GCJ02 画的，直接把 OSM 的 WGS84 坐标丢上去
+  // 会整体错位约 450m（在 3~8km 的检索半径里，表现为“标记都在路对面/隔壁街区”）。
+  const fromWgs = coordType === "wgs84";
+  const w = fromWgs ? { lat: lat, lng: lng } : gcj2wgs(lat, lng);
+  const g = fromWgs ? wgs2gcj(lat, lng) : { lat: lat, lng: lng };
+
   let list = [], source = "osm", dbg = {};
   if (TENCENT_KEY) {
     source = "tencent";
     const kws = mode === "water" ? ["水库", "湖", "河"] : ["钓场", "钓鱼"];
-    const arrs = await Promise.all(kws.map((k) => tencentPlace(lat, lng, radius, k)
+    const arrs = await Promise.all(kws.map((k) => tencentPlace(g.lat, g.lng, radius, k)
       .catch((e) => { dbg["err_" + k] = e.message; return []; })));
     list = arrs.reduce((a, b) => a.concat(b), []);
   } else {
-    const r = await nearbyOSM(lat, lng, radius, mode);
+    const r = await nearbyOSM(w.lat, w.lng, radius, mode);
     dbg.mirror = r.mirror;
     dbg.named = r.named.length;
     dbg.unnamed = r.unnamed.length;
@@ -365,6 +458,14 @@ async function nearby(lat, lng, radius, mode) {
     merged.push(x);
   });
   list = merged.slice(0, 30);
+  // OSM 返回的是 WGS84，转成 GCJ02 再交给小程序地图，否则标记整体偏约 450m
+  if (source === "osm") {
+    list = list.map((x) => {
+      if (x.lat == null || x.lng == null) return x;
+      const c = wgs2gcj(x.lat, x.lng);
+      return Object.assign({}, x, { lat: c.lat, lng: c.lng });
+    });
+  }
   dbg.total = list.length;
   dbg.merged = merged.length;
   return { ok: true, v: 2, source: source, list: list, dbg: dbg };
@@ -378,7 +479,7 @@ exports.main = async (event) => {
     const radius = Math.min(30000, Math.max(500, parseFloat(event.radius) || 3000));
     const mode = event.mode === "spot" ? "spot" : "water";
     try {
-      return await nearby(nlat, nlng, radius, mode);
+      return await nearby(nlat, nlng, radius, mode, event.coordType === "wgs84" ? "wgs84" : "gcj02");
     } catch (e) {
       return {
         ok: false, v: 2,
@@ -392,10 +493,16 @@ exports.main = async (event) => {
   const lat = parseFloat(event.lat), lng = parseFloat(event.lng);
   if (!isFinite(lat) || !isFinite(lng)) return { ok: false, msg: "坐标缺失" };
 
+  // 坐标基准：默认按 GCJ02 理解（小程序地图组件 / chooseLocation 都是 GCJ02）。
+  // Open-Meteo 的网格约 1~11km，转不转对天气值几乎无影响，但统一按 WGS84 请求更自洽；
+  // 逆地理编码对差 400~500m 很敏感，必须转（这是「定位到隔壁厂区」的根因）。
+  const coordType = event.coordType === "wgs84" ? "wgs84" : "gcj02";
+  const w = coordType === "wgs84" ? { lat: lat, lng: lng } : gcj2wgs(lat, lng);
+
   // 两个接口并行，总耗时取决于较慢的那个
   const [weather, place] = await Promise.all([
-    fetchWeather(lat, lng).catch((e) => ({ __err: e.message || "天气接口失败" })),
-    fetchPlace(lat, lng)
+    fetchWeather(w.lat, w.lng).catch((e) => ({ __err: e.message || "天气接口失败" })),
+    fetchPlace(lat, lng, coordType)
   ]);
 
   if (weather && weather.__err) return { ok: false, msg: weather.__err, place: place };
