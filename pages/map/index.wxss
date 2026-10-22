@@ -4,7 +4,7 @@
    与下方卡片里的文字错开一格 */
 .geo { padding: 0 28rpx; }
 
-/* 钓点卡底部操作行：左侧「在高德地图打开」拉伸，右侧「分享 / 删除」靠右垂直居中 */
+/* 钓点卡底部操作行：左侧「导航到钓点」，右侧「分享 / 删除」垂直居中 */
 .spotops { align-items: center; }
 .spotops .del { flex-shrink: 0; line-height: 1; }
 

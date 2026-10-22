@@ -1,0 +1,7 @@
+{
+  "name": "map",
+  "version": "1.0.0",
+  "description": "腾讯位置服务路线规划代理（导航到钓点，绕过小程序域名白名单）",
+  "main": "index.js",
+  "dependencies": {}
+}

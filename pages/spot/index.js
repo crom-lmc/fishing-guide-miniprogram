@@ -17,7 +17,14 @@ Page(TH.mix({
     photos: [],
     note: "",
     custom: "",
-    syncMsg: ""
+    syncMsg: "",
+    routeVisible: false,
+    routeLoading: false,
+    routeMode: "driving",
+    route: null,
+    pline: [],      // 地图折线（map 组件 polyline）
+    mapPts: [],     // 视野自适应的坐标点集
+    routeErr: ""
   },
 
   onLoad(q) {
@@ -156,16 +163,83 @@ Page(TH.mix({
     wx.navigateTo({ url: "/pages/poster/index?id=" + this.data.id });
   },
 
-  openAmap() {
+  // ---- 导航到钓点（路线规划，走 map 云函数）----
+  navToSpot() {
     const s = this.data.spot;
     if (!s) return;
-    const url = "https://uri.amap.com/marker?position=" + s.lng + "," + s.lat
-      + "&name=" + encodeURIComponent(s.name);
-    wx.setClipboardData({
-      data: url,
-      success: () => wx.showToast({ title: "链接已复制，粘贴到浏览器打开", icon: "none" })
+    wx.getFuzzyLocation({
+      type: "gcj02",
+      success: (loc) => {
+        const from = loc.latitude + "," + loc.longitude;
+        const to = s.lat + "," + s.lng;
+        this.setData({ routeVisible: true, routeLoading: true, routeErr: "", route: null, pline: [], mapPts: [] });
+        this.fetchRoute(from, to, this.data.routeMode);
+      },
+      fail: () => {
+        // 拿不到模糊位置就直接走原生地图导航（原生会自行要权限）
+        wx.showToast({ title: "无法获取当前位置，改用地图导航", icon: "none" });
+        this.startNav();
+      }
     });
   },
+
+  // WXML 表达式不支持模板字符串与 Math，显示文本在 JS 预格式化
+  fmtRoute(r) {
+    if (!r) return r;
+    const d = r.distance || 0, t = r.duration || 0;
+    r._dist = d >= 1000 ? (d / 1000).toFixed(1) + " km" : d + " m";
+    r._dur = t >= 60 ? Math.floor(t / 60) + " 小时 " + (t % 60) + " 分" : t + " 分钟";
+    (r.steps || []).forEach(s => {
+      s._dt = s.dist ? "（" + (s.dist >= 1000 ? (s.dist / 1000).toFixed(1) + "km" : s.dist + "m") + "）" : "";
+    });
+    return r;
+  },
+
+  fetchRoute(from, to, mode) {
+    this._from = from; this._to = to;
+    this.setData({ routeLoading: true, routeErr: "", routeMode: mode });
+    wx.cloud.callFunction({
+      name: "map",
+      data: { action: "direction", from: from, to: to, mode: mode },
+      success: (res) => {
+        const r = res && res.result;
+        if (r && r.ok) {
+          const route = this.fmtRoute(r.route);
+          const pts = route.polyline || [];
+          this.setData({
+            route: route,
+            pline: pts.length ? [{ points: pts, color: "#3FA9F5CC", width: 6, arrowLine: true }] : [],
+            mapPts: pts,
+            routeLoading: false
+          });
+        }
+        else this.setData({ routeErr: (r && r.msg) || "路线规划失败", route: null, pline: [], mapPts: [], routeLoading: false });
+      },
+      fail: () => this.setData({ routeErr: "云函数调用失败，请检查 map 是否已部署", route: null, pline: [], mapPts: [], routeLoading: false })
+    });
+  },
+
+  switchRouteMode(e) {
+    const mode = e.currentTarget.dataset.mode;
+    if (mode === this.data.routeMode && this.data.route) return;
+    if (!this._from) return;
+    this.fetchRoute(this._from, this._to, mode);
+  },
+
+  // 真正拉起导航：走微信原生地图（openLocation），由系统选择腾讯/高德等地图 App
+  startNav() {
+    const s = this.data.spot;
+    if (!s) return;
+    wx.openLocation({
+      latitude: s.lat, longitude: s.lng,
+      name: s.name || "钓点", address: s.addr || "", scale: 15
+    });
+  },
+
+  closeRoute() { this.setData({ routeVisible: false }); },
+
+  // 仅用于 catchtap 阻止冒泡（点面板内不关闭）
+  stop() {},
 
   // 分享给钓友：必须分享到地图页 + query 带坐标。
   // 钓点只存本机，好友设备上没有这条记录，直接分享 /pages/spot/index?id= 只会显示「钓点不存在」

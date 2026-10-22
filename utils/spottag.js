@@ -1,13 +1,19 @@
 // 钓点标签词表：分组 + 单选/多选语义
 // 之所以用固定词表而不是纯自由输入，是为了让「筛选/展示/海报」三处口径一致；
 // 词表覆盖不到的用「其他」组的自定义标签兜底
+const FD = require("./../data/fishing-data.js");
+
+// 「常见鱼」词表直接取自鱼种图鉴 FISH（保持两边一致，图鉴更新这里自动跟着变），
+// 末尾保留「杂鱼多」作为非图鉴鱼种的兜底标签
+const FISH_NAMES = FD.FISH.map(f => f.n).concat(["杂鱼多"]);
+
 const GROUPS = [
   { k: "depth", n: "水深", multi: false, opts: ["浅水", "中等水深", "深水"] },
   { k: "bottom", n: "底质", multi: true, opts: ["泥底", "沙底", "石底", "水草多", "有障碍物"] },
   { k: "fee", n: "收费", multi: false, opts: ["免费", "收费", "按斤结算", "需办卡"] },
   { k: "time", n: "时段", multi: false, opts: ["可夜钓", "仅限白天"] },
   { k: "fac", n: "配套", multi: true, opts: ["停车方便", "有厕所", "有小卖部", "需徒步", "可打窝", "可用饵料"] },
-  { k: "fish", n: "常见鱼", multi: true, opts: ["鲫鱼", "鲤鱼", "草鱼", "鲢鳙", "翘嘴", "黑鱼", "鳜鱼", "杂鱼多"] }
+  { k: "fish", n: "常见鱼", multi: true, opts: FISH_NAMES }
 ];
 
 // 词表全集，用于给自定义标签「去重」：已收录的不重复塞进「其他」
