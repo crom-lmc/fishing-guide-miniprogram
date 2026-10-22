@@ -11,7 +11,8 @@ const S = require("./score.js");
 //   也让同一位置的地名稳定，不会一会儿这个楼一会儿那个楼。
 // 内存 + 本地存储双缓存：内存挡同一页面内的重复调用，存储挡冷启动/跨页面。
 const CACHE_TTL = 10 * 60 * 1000;
-const CACHE_KEY = "fish.weather.cache.v1";
+// v2：v1 缓存里可能出现过一个坏字符的 place（真机渲染成乱码），升键作废全部旧缓存
+const CACHE_KEY = "fish.weather.cache.v2";
 const CACHE_MAX = 40;
 const _mem = {};
 

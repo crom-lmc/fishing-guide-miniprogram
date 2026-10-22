@@ -139,6 +139,100 @@ function fetchWeather(lat, lng) {
     + "&past_days=1&forecast_days=2&timezone=auto", 9000);
 }
 
+// ===== Open-Meteo 结果缓存（方案 A 的关键）=====
+// 实测国内访问 Open-Meteo 要 1.1~2.2s（服务器在欧洲/北美），是首页首屏的主要耗时。
+// 改为「实况用腾讯、预报仍用 Open-Meteo」后，预报不必每次真请求：
+// 同一 0.01° 网格（约 1km）+ 同一 30 分钟窗口内复用结果，命中即为毫秒级。
+const _wxCache = Object.create(null);
+const WX_TTL = 30 * 60 * 1000;
+
+function fetchWeatherCached(lat, lng) {
+  const key = lat.toFixed(2) + "," + lng.toFixed(2) + "@" + Math.floor(Date.now() / WX_TTL);
+  if (_wxCache[key]) return Promise.resolve(_wxCache[key]);
+  return fetchWeather(lat, lng).then((j) => {
+    if (j && j.current) {
+      if (Object.keys(_wxCache).length > 50) Object.keys(_wxCache).forEach(k => delete _wxCache[k]);
+      _wxCache[key] = j;
+    }
+    return j;
+  });
+}
+
+// ===== 腾讯天气「实况」（方案 A 的主数据源）=====
+// 实测 /ws/weather/v1 只返回 realtime（无逐小时预报、无生活指数），
+// 但胜在国内节点 74~237ms（Open-Meteo 需 1.4s+），且自带省市区。
+// 关键：把腾讯字段映射成 Open-Meteo 的 current 结构，客户端 pages/index 与 utils/score.js 零改动。
+// 映射口径必须对齐 utils/score.js：wxCodeToKey（WMO 码）、kmhToLevel（km/h）、degToDirKey（角度）。
+
+// 中文天气 → WMO code（score.js 的 wxCodeToKey 认这些码）
+// 顺序敏感：先判组合词（晴间多云/少云）再判单字（晴），否则「晴间多云」会被 /晴/ 抢走
+const WMO_BY_TEXT = [
+  [/雷|雷阵雨|冰雹/, 95], [/暴雨|大暴雨|特大暴雨/, 82], [/大雨/, 65],
+  [/中雨/, 63], [/小雨|阵雨|细雨|雨夹雪|毛毛雨/, 61],
+  [/大雪/, 75], [/中雪/, 73], [/小雪|雪/, 71],
+  [/雾|霾|沙尘/, 45], [/少云|晴间多云|多云转晴/, 1], [/晴/, 0], [/多云/, 2], [/阴/, 3]
+];
+function wmoCodeOf(text) {
+  const t = String(text || "");
+  for (let i = 0; i < WMO_BY_TEXT.length; i++) if (WMO_BY_TEXT[i][0].test(t)) return WMO_BY_TEXT[i][1];
+  return 3;   // 认不出来按「阴」处理，评分中等偏保守
+}
+
+// 中文风力等级 → km/h 中值（score.js 的 kmhToLevel 再换算回风级）
+const LEVEL_KMH = { "0": 0.5, "1": 3, "2": 8, "3": 15, "4": 24, "5": 33, "6": 44, "7": 55, "8": 70, "9": 85, "10": 100, "11": 115, "12": 130 };
+function kmhOfPower(p) {
+  const t = String(p || "");
+  const m = t.match(/(\d+)/);                      // 「1级」/「1-2级」都取第一个数字
+  if (m) return LEVEL_KMH[m[1]] || 3;
+  // 静风/无风时腾讯不给数字（实测 wind_power_v2 = "无风"），不能按默认 3km/h 算成 1 级
+  if (/无风|静|软风|微风/.test(t)) return /微风/.test(t) ? 8 : 0.5;
+  return 3;
+}
+
+// 中文风向 → 角度（score.js degToDirKey 按 45° 分八方位：0=n,45=ne,90=e...）
+// 必须按「两字方位优先」排序：否则「西南风」会先被单字「南」匹配成 180°（实测踩过）
+const DIR_DEG = [
+  ["东北", 45], ["东南", 135], ["西南", 225], ["西北", 315],
+  ["北", 0], ["东", 90], ["南", 180], ["西", 270]
+];
+function degOfDir(cn) {
+  const t = String(cn || "").replace(/风/g, "");
+  for (let i = 0; i < DIR_DEG.length; i++) if (t.indexOf(DIR_DEG[i][0]) >= 0) return DIR_DEG[i][1];
+  return 0;
+}
+
+function num(v) {
+  const n = parseFloat(v);
+  return isFinite(n) ? n : null;
+}
+
+// lat/lng 必须是 GCJ02（腾讯只认火星坐标，与 Open-Meteo 用的 WGS84 不同）
+async function fetchTencentRealtime(lat, lng) {
+  if (!TENCENT_KEY) return null;
+  const j = await tencentGet("/ws/weather/v1/", {
+    location: lat.toFixed(6) + "," + lng.toFixed(6),
+    key: TENCENT_KEY,
+    output: "json"
+  }, 5000);
+  if (!j || j.status !== 0) return null;
+  const rt = j.result && j.result.realtime && j.result.realtime[0];
+  if (!rt) return null;
+  const inf = rt.infos || {};
+  return {
+    current: {
+      time: String(rt.update_time || "").replace(" ", "T"),
+      temperature_2m: num(inf.temperature),
+      pressure_msl: num(inf.air_pressure),
+      wind_speed_10m: kmhOfPower(inf.wind_power_v2 || inf.wind_power),
+      wind_direction_10m: degOfDir(inf.wind_direction),
+      weather_code: wmoCodeOf(inf.weather)
+    },
+    _src: "tencent",
+    _realtime: inf,
+    _place: [rt.province, rt.city, rt.district].filter(Boolean).join("")
+  };
+}
+
 // ---- 繁→简：BigDataCloud localityLanguage=zh 返回繁体（如「未央區」）----
 const T2S = {
   陜: "陕", 廣: "广", 雲: "云", 貴: "贵", 肅: "肃", 寧: "宁", 遼: "辽",
@@ -308,6 +402,30 @@ function pkey(lat, lng) {
   return Number(lat).toFixed(3) + "," + Number(lng).toFixed(3);   // ≈100m 网格
 }
 
+// 地名净化：剔除替换符、控制字符、孤立代理对、零宽/变体选择符与私用区字符。
+// 目的：防个别异常字符混进 place 后被客户端缓存 10 分钟、并在真机上渲染成乱码
+// （实测出现过「渭城区·朗诗·渭城府」的「区」位显示为「�◆�」的字节级乱码）。
+function cleanText(s) {
+  const str = String(s == null ? "" : s);
+  let out = "";
+  for (let i = 0; i < str.length; i++) {
+    const c = str.charCodeAt(i);
+    if (c >= 0xD800 && c <= 0xDBFF) {              // 高位代理：成对保留，孤立丢弃
+      const d = str.charCodeAt(i + 1);
+      if (d >= 0xDC00 && d <= 0xDFFF) { out += str[i] + str[i + 1]; i++; }
+      continue;
+    }
+    if (c >= 0xDC00 && c <= 0xDFFF) continue;      // 孤立低位代理
+    if (c === 0xFFFD) continue;                    // 替换字符
+    if (c === 0xFEFF || c === 0x200B || c === 0xFE0E || c === 0xFE0F) continue;  // 零宽/变体选择符
+    if (c < 0x20 && c !== 0x0A) continue;          // C0 控制字符（保留换行）
+    if (c >= 0x7F && c < 0xA0) continue;           // C1 控制字符（字节级乱码常客）
+    if (c >= 0xE000 && c <= 0xF8FF) continue;      // 私用区（各厂商自定义，真机多半没字形）
+    out += str[i];
+  }
+  return out;
+}
+
 function fetchPlace(lat, lng, coordType) {
   // 调用方默认给 GCJ02（小程序地图/chooseLocation 都是这套），境外数据源要先转 WGS84；
   // 腾讯位置服务反过来只认 GCJ02，两者各用各的坐标，不能混。
@@ -355,7 +473,7 @@ function fetchPlace(lat, lng, coordType) {
       // 位置显示保持稳定，只是暂时不再刷新。
       const old = _placeCache[ck];
       if (old && old.tencent && Date.now() - old.t < PLACE_STALE_MAX) {
-        return { place: old.place, tencentErr: tencentErr, cached: true, stale: true };
+        return { place: cleanText(old.place), tencentErr: tencentErr, cached: true, stale: true };
       }
       const bd = r[1], ph = r[2];
       // Photon 的结果如果已经包含在省市区里（比如返回「新城区」），就不重复拼
@@ -364,6 +482,7 @@ function fetchPlace(lat, lng, coordType) {
     }
     // 只缓存腾讯解析出的精确地名（回退源的名字不可靠，不缓存，免得被当成"好值"）
     if (fromTencent && place) {
+      place = cleanText(place);
       _placeCache[ck] = { place: place, t: Date.now(), tencent: true };
     }
     // tencentErr 透传给调用方：配了 key 但仍拿不到楼名时，能直接看到是 311 / 110 / 163 哪一类
@@ -660,15 +779,38 @@ exports.main = async (event) => {
   const coordType = event.coordType === "wgs84" ? "wgs84" : "gcj02";
   const w = coordType === "wgs84" ? { lat: lat, lng: lng } : gcj2wgs(lat, lng);
 
-  // 两个接口并行，总耗时取决于较慢的那个
-  const [weather, placeRes] = await Promise.all([
-    fetchWeather(w.lat, w.lng).catch((e) => ({ __err: e.message || "天气接口失败" })),
+  // 三路并行：
+  //   ① Open-Meteo 逐小时预报（慢，走 30 分钟缓存，用来画未来 24 小时曲线）
+  //   ② 腾讯天气实况（快，国内节点，作为出钓指数的主数据源）
+  //   ③ 逆地址解析（地名）
+  // 总耗时取决于最慢的一路；腾讯实况通常 100~300ms，缓存命中时 ① 也接近 0ms。
+  const [omRes, txRt, placeRes] = await Promise.all([
+    fetchWeatherCached(w.lat, w.lng).catch((e) => ({ __err: e.message || "天气接口失败" })),
+    fetchTencentRealtime(lat, lng).catch(() => null),
     fetchPlace(lat, lng, coordType)
   ]);
-  const place = (placeRes && placeRes.place) || "";
-  const tencentErr = (placeRes && placeRes.tencentErr) || "";
 
-  if (weather && weather.__err) return { ok: false, msg: weather.__err, place: place, tencent_err: tencentErr };
-  if (!weather || !weather.current) return { ok: false, msg: "天气接口返回异常", place: place, tencent_err: tencentErr };
-  return { ok: true, weather: weather, place: place, tencent_err: tencentErr };
+  let place = (placeRes && placeRes.place) || "";
+  const tencentErr = (placeRes && placeRes.tencentErr) || "";
+  // 腾讯天气自带省市区，逆地址解析失败时兜底，至少有「陕西省西安市未央区」
+  if (!place && txRt && txRt._place) place = cleanText(txRt._place);
+
+  const om = (omRes && !omRes.__err) ? omRes : null;
+  const omErr = (omRes && omRes.__err) || "";
+
+  // 实况优先用腾讯：保留 Open-Meteo 的 hourly（曲线），只把 current 换成腾讯的
+  if (txRt) {
+    const weather = Object.assign({}, om || {}, {
+      current: txRt.current,
+      _src: "tencent",
+      _realtime: txRt._realtime
+    });
+    if (!om) weather.hourly = null;    // 预报也没拿到时，客户端曲线降级为「暂不可用」
+    return { ok: true, weather: weather, place: place, tencent_err: tencentErr, wx_err: omErr, weather_src: "tencent" };
+  }
+
+  // 腾讯不可用：完全退回 Open-Meteo（与改造前行为一致）
+  if (omErr) return { ok: false, msg: omErr, place: place, tencent_err: tencentErr };
+  if (!om || !om.current) return { ok: false, msg: "天气接口返回异常", place: place, tencent_err: tencentErr };
+  return { ok: true, weather: om, place: place, tencent_err: tencentErr, weather_src: "open-meteo" };
 };

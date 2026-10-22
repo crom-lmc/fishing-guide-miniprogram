@@ -158,8 +158,8 @@ Page(TH.mix({
   // 坐标 → 中文地名（走云函数 weather 的逆地理编码）；失败退回「手动选点缓存」的楼名
   placeOf(lat, lng) {
     return W.fetchAll(lat, lng, "gcj02")
-      .then((d) => (d && d.place) || PL.nearbyName(lat, lng, 300) || "")
-      .catch(() => PL.nearbyName(lat, lng, 300) || "");
+      .then((d) => PL.cleanText((d && d.place) || PL.nearbyName(lat, lng, 300) || ""))
+      .catch(() => PL.cleanText(PL.nearbyName(lat, lng, 300) || ""));
   },
 
   // 静默定位：精确优先，拿不到再退模糊定位（都不弹页）

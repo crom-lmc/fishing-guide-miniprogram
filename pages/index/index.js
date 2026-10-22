@@ -370,6 +370,7 @@ Page(TH.mix({
     // 4 位小数 ≈ 11m，够区分同一片水域的不同岸线；3 位只有百米级，看着像「只定位到区」
     const coord = p.lat.toFixed(4) + "°N, " + p.lng.toFixed(4) + "°E";
     const how = p.fuzzy ? "，模糊定位" : "，精确定位";
+    place = PL.cleanText(place);
     if (!place) return coord + how;
     return place + how + " " + coord;
   },

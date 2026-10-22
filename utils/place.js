@@ -39,4 +39,29 @@ function nearbyName(lat, lng, maxM) {
   return haversine(lat, lng, p.lat, p.lng) <= r ? p.name : "";
 }
 
-module.exports = { savePicked, nearbyName, haversine };
+// 地名净化：剔除替换符、控制字符、孤立代理对、零宽/变体选择符与私用区字符。
+// 与云函数 weather 里的 cleanText 同一套规则：真机出现过 place 某个字渲染成
+// 「�◆�」字节级乱码（渭城区·朗诗·渭城府），这里在显示前再兜一道底，
+// 同时覆盖本地 chooseLocation 存下的楼名等非云函数来源。
+function cleanText(s) {
+  const str = String(s == null ? "" : s);
+  let out = "";
+  for (let i = 0; i < str.length; i++) {
+    const c = str.charCodeAt(i);
+    if (c >= 0xD800 && c <= 0xDBFF) {              // 高位代理：成对保留，孤立丢弃
+      const d = str.charCodeAt(i + 1);
+      if (d >= 0xDC00 && d <= 0xDFFF) { out += str[i] + str[i + 1]; i++; }
+      continue;
+    }
+    if (c >= 0xDC00 && c <= 0xDFFF) continue;      // 孤立低位代理
+    if (c === 0xFFFD) continue;                    // 替换字符
+    if (c === 0xFEFF || c === 0x200B || c === 0xFE0E || c === 0xFE0F) continue;  // 零宽/变体选择符
+    if (c < 0x20 && c !== 0x0A) continue;          // C0 控制字符（保留换行）
+    if (c >= 0x7F && c < 0xA0) continue;           // C1 控制字符（字节级乱码常客）
+    if (c >= 0xE000 && c <= 0xF8FF) continue;      // 私用区（真机多半没字形）
+    out += str[i];
+  }
+  return out;
+}
+
+module.exports = { savePicked, nearbyName, haversine, cleanText };
