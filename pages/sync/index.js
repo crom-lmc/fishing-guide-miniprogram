@@ -28,6 +28,8 @@ function mergeById(local, cloud) {
 }
 
 Page(TH.mix({
+  // 单页模式下 wx.login 不可用，云同步页分享出去没意义
+  canTimeline: false,
   data: {
     localLog: 0, localSpot: 0,
     cloudLog: 0, cloudSpot: 0,

@@ -1,5 +1,10 @@
 // 钓鱼指南 · 从入门到上鱼
 const C = require("./utils/config.js");
+const SH = require("./utils/share.js");
+
+// 在所有页面注册之前执行：给漏写分享回调的页面补上默认实现。
+// 不补的话，右上角「…」里的「转发给朋友」「分享到朋友圈」就是灰的（与备案/认证无关）。
+SH.installShareDefaults();
 const KEYS = {
   LOG: "fish.log.v1",     // 渔获日志
   GEAR: "fish.gear.v1",   // 装备勾选状态

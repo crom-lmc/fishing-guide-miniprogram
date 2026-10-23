@@ -1,5 +1,6 @@
 // 安全与法规（内容同步自 Web 版「安全与法规」章节）
 const TH = require("../../utils/theme.js");
+const SHR = require("../../utils/share.js");
 Page(TH.mix({
   data: {
     first: "第一条：抬头看天，低头看线。碳素钓竿是优良导体，沾水后更甚。竿长 5.4m 站在地面上举起，竿尖可触及 8m 以上高度。任何电力线路下方及其周边，一律不要扬竿、不要通过、不要垂钓。",
@@ -54,4 +55,8 @@ Page(TH.mix({
       "垃圾袋随身，线头饵袋全部带走"
     ]
   }
+,
+  // 转发 / 朋友圈：页面里不写 onShareAppMessage，右上角菜单那两项就是灰的
+  onShareAppMessage() { return SHR.friend(SHR.titleOf("/pages/rules/index"), "/pages/rules/index"); },
+  onShareTimeline() { return SHR.timeline(SHR.titleOf("/pages/rules/index")); }
 }));

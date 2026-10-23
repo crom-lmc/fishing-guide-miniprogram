@@ -2,6 +2,7 @@
 // 全部 Canvas 2D 手绘（不引第三方图表库，避免体积与域名问题），配色跟随主题
 const app = getApp();
 const TH = require("../../utils/theme.js");
+const SHR = require("../../utils/share.js");
 
 const PAL = {
   dark: { grid: "#262B38", axis: "#8A93A6", val: "#E6EAF2", bar1: "#7E9BFA", bar2: "#43C4BF", line: "#43C4BF" },
@@ -319,4 +320,8 @@ Page(TH.mix({
 
     drawXLabels(ctx, rows, X, H - 9, W, P.axis);
   }
+,
+  // 转发 / 朋友圈：页面里不写 onShareAppMessage，右上角菜单那两项就是灰的
+  onShareAppMessage() { return SHR.friend(SHR.titleOf("/pages/stats/index"), "/pages/stats/index"); },
+  onShareTimeline() { return SHR.timeline(SHR.titleOf("/pages/stats/index")); }
 }));

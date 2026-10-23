@@ -1,6 +1,7 @@
 // 渔获日志：数据只存本机（与 Web 版 localStorage 一致）
 const app = getApp();
 const D = require("../../data/fishing-data.js");
+const SHR = require("../../utils/share.js");
 const C = require("../../utils/config.js");
 const V = require("../../utils/vision.js");
 const W = require("../../utils/weather.js");
@@ -472,4 +473,8 @@ Page(TH.mix({
       }
     });
   }
+,
+  // 转发 / 朋友圈：页面里不写 onShareAppMessage，右上角菜单那两项就是灰的
+  onShareAppMessage() { return SHR.friend(SHR.titleOf("/pages/log/index"), "/pages/log/index"); },
+  onShareTimeline() { return SHR.timeline(SHR.titleOf("/pages/log/index")); }
 }));

@@ -1,5 +1,6 @@
 // 饵料配方
 const D = require("../../data/fishing-data.js");
+const SHR = require("../../utils/share.js");
 const TH = require("../../utils/theme.js");
 const IM = require("../../utils/img.js");
 
@@ -65,4 +66,8 @@ Page(TH.mix({
       ? "已按当前月份（" + month + " 月）默认选中「" + cat + "」，点「全部」看所有配方" : "";
     this.setData({ list: list, lures: lures, tip: tip });
   }
+,
+  // 转发 / 朋友圈：页面里不写 onShareAppMessage，右上角菜单那两项就是灰的
+  onShareAppMessage() { return SHR.friend(SHR.titleOf("/pages/bait/index"), "/pages/bait/index"); },
+  onShareTimeline() { return SHR.timeline(SHR.titleOf("/pages/bait/index")); }
 }));

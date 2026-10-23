@@ -1,6 +1,7 @@
 // 装备清单：勾选状态存本机，与 Web 版同一套 key 语义
 const app = getApp();
 const D = require("../../data/fishing-data.js");
+const SHR = require("../../utils/share.js");
 const TH = require("../../utils/theme.js");
 
 Page(TH.mix({
@@ -51,4 +52,8 @@ Page(TH.mix({
     app.set(app.KEYS.GEAR, {});
     this.render();
   }
+,
+  // 转发 / 朋友圈：页面里不写 onShareAppMessage，右上角菜单那两项就是灰的
+  onShareAppMessage() { return SHR.friend(SHR.titleOf("/pages/gear/index"), "/pages/gear/index"); },
+  onShareTimeline() { return SHR.timeline(SHR.titleOf("/pages/gear/index")); }
 }));

@@ -1,5 +1,6 @@
 // 鱼种图鉴
 const D = require("../../data/fishing-data.js");
+const SHR = require("../../utils/share.js");
 const TH = require("../../utils/theme.js");
 const IM = require("../../utils/img.js");
 const CF = require("../../utils/config.js");
@@ -98,4 +99,8 @@ Page(TH.mix({
   open(e) {
     wx.navigateTo({ url: "/pages/fish/detail?n=" + encodeURIComponent(e.currentTarget.dataset.n) });
   }
+,
+  // 转发 / 朋友圈：页面里不写 onShareAppMessage，右上角菜单那两项就是灰的
+  onShareAppMessage() { return SHR.friend(SHR.titleOf("/pages/fish/list"), "/pages/fish/list"); },
+  onShareTimeline() { return SHR.timeline(SHR.titleOf("/pages/fish/list")); }
 }));

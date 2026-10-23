@@ -425,7 +425,8 @@ Page(TH.mix({
       + "&lat=" + s.lat + "&lng=" + s.lng;
   },
 
-  // 分享到朋友圈：仅非 tabBar 页面支持（本页不在 tabBar，可用），顺带把最近收藏的钓点带过去
+  // 分享到朋友圈：tabBar 页面也能分享（官方未禁止），只是朋友圈打开是「单页模式」，
+  // 那里不会渲染 tabBar，所以分享出去的页面要能自洽显示。顺带把最近收藏的钓点带过去
   onShareTimeline() {
     const s = (this.data.spots || [])[0];
     return {

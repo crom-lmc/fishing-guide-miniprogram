@@ -1,5 +1,6 @@
 // 附近水域 / 钓点：按半径查附近的河流、水库、湖泊与钓场，按直线距离排序
 const TH = require("../../utils/theme.js");
+const SHR = require("../../utils/share.js");
 // 定位：用页面上的地图组件（moveToLocation → 连续读中心），精度即 GPS，无需 getLocation 接口
 // 数据：走云函数 weather 的 nearby 分支（腾讯位置服务 key 优先；免 key 时退 OpenStreetMap）
 const app = getApp();
@@ -448,4 +449,8 @@ Page(TH.mix({
     app.set(app.KEYS.SPOT, spots);
     wx.showToast({ title: "已收藏为钓点", icon: "success" });
   }
+,
+  // 转发 / 朋友圈：页面里不写 onShareAppMessage，右上角菜单那两项就是灰的
+  onShareAppMessage() { return SHR.friend(SHR.titleOf("/pages/nearby/index"), "/pages/nearby/index"); },
+  onShareTimeline() { return SHR.timeline(SHR.titleOf("/pages/nearby/index")); }
 }));
