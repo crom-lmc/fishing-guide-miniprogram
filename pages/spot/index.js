@@ -8,6 +8,8 @@ const TH = require("../../utils/theme.js");
 const MAX_PHOTO = 9;
 
 Page(TH.mix({
+  // 钓点只存本机，朋友圈打开是单页模式（读不到 storage，也不能跳转），分享过去只会是一张空页
+  canTimeline: false,
   data: {
     id: 0,
     spot: null,
@@ -28,11 +30,30 @@ Page(TH.mix({
   },
 
   onLoad(q) {
-    const id = +(q && q.id || 0);
+    // 两条进入路径：页面跳转带 ?id=12；扫小程序码带 ?scene=s12（云函数 wxacode 用的格式）
+    let id = +(q && q.id || 0);
+    if (!id && q && q.scene) {
+      const m = /^s(\d+)$/.exec(decodeURIComponent(q.scene));
+      if (m) id = +m[1];
+    }
     const raw = (app.get(app.KEYS.SPOT, []) || []).filter(s => s.id === id)[0];
     if (!raw) {
-      wx.showToast({ title: "钓点不存在或已删除", icon: "none" });
-      setTimeout(() => wx.navigateBack(), 900);
+      if (q && q.scene) {
+        // 扫码进来的：本机没有这条钓点（数据只存在分享者手机），别让用户卡在空白页
+        wx.showModal({
+          title: "钓点不在本机",
+          content: "钓点数据只保存在分享者的手机上。可以先在「钓点地图」里自己标一个常去的位置。",
+          confirmText: "去地图",
+          cancelText: "回首页",
+          success: (r) => {
+            if (r.confirm) wx.redirectTo({ url: "/pages/map/index" });
+            else wx.switchTab({ url: "/pages/index/index" });
+          }
+        });
+      } else {
+        wx.showToast({ title: "钓点不存在或已删除", icon: "none" });
+        setTimeout(() => wx.navigateBack(), 900);
+      }
       return;
     }
     const s = TG.ensure(raw);

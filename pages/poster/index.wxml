@@ -1,8 +1,8 @@
 <view class="wrap {{tc}}" wx:if="{{spot}}">
 
   <view class="pvbox">
-    <!-- 540×792 = 600×880 等比缩放，保证绘制时 scale 不会变形 -->
-    <canvas type="2d" id="posterCv" class="cv" style="width:540rpx;height:792rpx"></canvas>
+    <!-- 宽度固定 540rpx，高度由内容算出来回写（cvH），无照片时不会留一大块空白 -->
+    <canvas type="2d" id="posterCv" class="cv" style="width:540rpx;height:{{cvH}}rpx"></canvas>
   </view>
 
   <text class="tiny muted mt" wx:if="{{msg}}">{{msg}}</text>
@@ -16,7 +16,12 @@
     <text class="tiny plink" bindtap="preview">预览大图（可长按保存到相册）</text>
   </view>
 
+  <view class="hint mt" wx:if="{{noPhoto}}">
+    <text class="tiny muted">这个钓点还没有照片，海报用的是文字版头部</text>
+    <text class="tiny plink" bindtap="goSpot">去补一张 ›</text>
+  </view>
+
   <view class="card mt2">
-    <text class="tiny muted">小程序码由云函数 wxacode 生成；未部署时海报照常生成，只是底部没有码。好友扫码后会打开钓点详情页——但钓点数据在你本机，对方看到的是他自己的钓点列表，所以分享钓点请改用详情页的「分享给钓友」。</text>
+    <text class="tiny muted">海报底部的小程序码：云函数 wxacode 可用时用「带钓点参数的专属码」，未部署或超时就自动回落到内置码（images/wxacode.png），不会再缺码。注意钓点数据只存在本机，好友扫码看到的是他自己的钓点列表，所以分享具体钓点请改用详情页的「分享给钓友」。</text>
   </view>
 </view>

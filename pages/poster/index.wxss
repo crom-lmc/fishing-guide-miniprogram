@@ -5,3 +5,4 @@
   overflow: hidden;
 }
 .plink { color: var(--a1); text-decoration: underline; }
+.hint { display: flex; align-items: center; justify-content: space-between; padding: 0 8rpx; }

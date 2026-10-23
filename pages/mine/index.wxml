@@ -54,6 +54,17 @@
   </view>
 
   <view class="card">
+    <text class="h3">分享给钓友</text>
+    <view class="qrbox">
+      <image class="qrimg" src="/images/wxacode.png" mode="aspectFit" bindlongpress="saveQr" />
+      <view class="qtx">
+        <text class="small">让钓友用微信扫这个码，直接打开「钓鱼指南」。</text>
+        <text class="tiny muted">长按左边这张码可保存到相册，发到群里或朋友圈。</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
     <text class="h3">关于</text>
     <text class="small muted mt">钓鱼指南 · 从入门到上鱼。出钓指数、鱼种图鉴、钓法教学、饵料配方、装备清单与渔获记录，全部数据仅保存在本机，不会上传。</text>
     <view class="hr"></view>

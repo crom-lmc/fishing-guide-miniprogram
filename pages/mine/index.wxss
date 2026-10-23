@@ -1,0 +1,25 @@
+/* 「分享给钓友」小程序码 */
+.qrbox {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+  margin-top: 16rpx;
+}
+
+/* 码图本身是白底，垫白底 + 圆角，暗色卡片上更干净；长按可保存 */
+.qrimg {
+  width: 200rpx;
+  height: 200rpx;
+  flex: none;
+  padding: 8rpx;
+  box-sizing: border-box;
+  border-radius: 16rpx;
+  background: #FFFFFF;
+  border: 1rpx solid var(--line);
+}
+
+.qtx {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}

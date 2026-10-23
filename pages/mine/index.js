@@ -1,6 +1,7 @@
 // 我的
 const app = getApp();
 const TH = require("../../utils/theme.js");
+const SHR = require("../../utils/share.js");
 
 // 外观条目的展示态：跟随模式显示 📱 + 当前实际主题；手动模式显示 ☀️/🌙
 function themeView() {
@@ -68,6 +69,33 @@ Page(TH.mix({
 
   goStats() { wx.navigateTo({ url: "/pages/stats/index" }); },
 
+  // 长按小程序码 → 存相册，方便发群 / 发朋友圈
+  saveQr() {
+    wx.getImageInfo({
+      src: "/images/wxacode.png",
+      success: (r) => {
+        wx.saveImageToPhotosAlbum({
+          filePath: r.path,
+          success: () => wx.showToast({ title: "已保存到相册", icon: "success" }),
+          fail: (e) => {
+            const m = (e && e.errMsg) || "";
+            if (/auth|deny|authorize|privacy/i.test(m)) {
+              wx.showModal({
+                title: "需要相册权限",
+                content: "保存小程序码需要「保存到相册」权限，是否去设置里打开？",
+                confirmText: "去设置",
+                success: (s) => { if (s.confirm) wx.openSetting(); }
+              });
+              return;
+            }
+            wx.showToast({ title: "保存失败，可截图分享", icon: "none" });
+          }
+        });
+      },
+      fail: () => wx.showToast({ title: "读取图片失败", icon: "none" })
+    });
+  },
+
   go(e) { wx.navigateTo({ url: e.currentTarget.dataset.url }); },
 
   clearAll() {
@@ -83,4 +111,8 @@ Page(TH.mix({
       }
     });
   }
+,
+  // 转发 / 朋友圈：页面里不写 onShareAppMessage，右上角菜单那两项就是灰的
+  onShareAppMessage() { return SHR.friend(SHR.titleOf("/pages/mine/index"), "/pages/mine/index"); },
+  onShareTimeline() { return SHR.timeline(SHR.titleOf("/pages/mine/index")); }
 }));
