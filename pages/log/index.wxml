@@ -99,7 +99,7 @@
             <text class="vd-date">{{item._md}}<text class="vd-wk">{{item._week}}</text></text>
             <view class="vd-ops">
               <text class="pbtn" data-id="{{item.id}}" bindtap="goCard">卡片</text>
-              <text class="del" data-id="{{item.id}}" bindtap="del">删除</text>
+              <text class="delpill" data-id="{{item.id}}" bindtap="del">删除</text>
             </view>
           </view>
         </view>

@@ -4,23 +4,8 @@
    与下方卡片里的文字错开一格 */
 .geo { padding: 0 28rpx; }
 
-/* 钓点卡底部操作行：左侧「导航到钓点」，右侧「分享 / 删除」垂直居中 */
-.spotops { align-items: center; }
-.spotops .del { flex-shrink: 0; line-height: 1; }
-
-/* 分享按钮原来挂在 .lops 里，挪到 .ops 后要补回同样的小胶囊样式 */
-.spotops .sbtn {
-  width: auto;
-  margin: 0;
-  padding: 0 22rpx;
-  height: 46rpx;
-  line-height: 46rpx;
-  font-size: 22rpx;
-  font-weight: 400;
-  color: var(--a2);
-  background: transparent;
-  border: 1rpx solid var(--a2);
-  border-radius: 999rpx;
-  flex-shrink: 0;
-}
-.spotops .sbtn::after { border: none; }
+/* 钓点卡底部操作行的尺寸 / 颜色 / 间距全部走全局：
+   .ops（gap + align-items）、.ops > .btn.sm、.sbtn、.delpill。
+   这里不要再写 .spotops 的局部规则——曾经补过一段和全局重复的 .spotops .sbtn，
+   又把 margin 写成 0 想抵消全局的 20rpx，结果两边一叠加反而更难排查。
+   真需要微调时，先看全局是不是已经能表达。 */

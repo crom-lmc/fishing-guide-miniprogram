@@ -538,12 +538,11 @@ rich-text { font-size: 26rpx; color: #C9D2E3; line-height: 1.75; }
 
 /* 钓点行内操作：分享按钮（open-type=share）+ 删除 */
 .lops { display: flex; align-items: center; flex-shrink: 0; }
-.lops .sbtn {
+.lops .sbtn, .ops .sbtn {
   width: auto;
-  margin: 0 20rpx 0 0;
   padding: 0 22rpx;
   height: 46rpx;
-  line-height: 46rpx;
+  line-height: 44rpx;
   font-size: 22rpx;
   font-weight: 400;
   color: var(--a2);
@@ -552,9 +551,39 @@ rich-text { font-size: 26rpx; color: #C9D2E3; line-height: 1.75; }
   border-radius: 999rpx;
   flex-shrink: 0;
 }
-.lops .sbtn::after { border: none; }
-.ops { display: flex; gap: 16rpx; }
+.lops .sbtn::after, .ops .sbtn::after { border: none; }
+/* .lops 行没有 gap，按钮右侧自己留 20rpx；
+   .ops 行已经有 gap 了，margin 必须归零——否则行末那个按钮会被再推进来 10px，
+   右边缘就和卡片里其它右对齐的文字（如「已选 0」「3 / 9」）对不齐 */
+.lops .sbtn { margin: 0 20rpx 0 0; }
+.ops .sbtn { margin: 0; }
+/* align-items 必须显式给 center：默认 stretch 时，固定了 height 的按钮（.sbtn/.delpill）
+   撑不过靠 padding 撑高的文字胶囊，会被顶到行首，看起来就是「没对齐」 */
+.ops { display: flex; gap: 16rpx; align-items: center; }
 .ops > .btn { flex: 1; }
+/* 行内胶囊统一 46rpx 高、44rpx 行高（扣掉上下各 1rpx 边框），
+   和 .sbtn / .delpill 用同一个盒子，三个按钮才不会高低不齐 */
+.ops > .btn.sm { height: 46rpx; padding: 0 24rpx; line-height: 44rpx; }
+
+/* 危险操作小胶囊：和「分享」同款尺寸描边，只把语义色换成红色。
+   原来「删除」是裸文本，跟旁边的胶囊按钮完全不搭，也没有点击热区 */
+.delpill {
+  display: inline-block;   /* <text> 默认 inline，不转块级的话 height/line-height 不生效 */
+  width: auto;
+  margin: 0;
+  flex-shrink: 0;
+  padding: 0 22rpx;
+  height: 46rpx;
+  line-height: 44rpx;
+  font-size: 22rpx;
+  font-weight: 400;
+  text-align: center;
+  color: var(--bad);
+  background: transparent;
+  border: 1rpx solid var(--bad);
+  border-radius: 999rpx;
+}
+.delpill:active { opacity: .55; }
 
 /* 钓点卡片：定宽图标列 + 文本列
    长钓点名换行后与首行文字左对齐（不再缩到 emoji 下面），地址/按钮缩进到同一文本列 */

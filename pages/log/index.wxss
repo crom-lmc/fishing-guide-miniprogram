@@ -83,7 +83,14 @@
   border-radius: 999rpx;
   padding: 10rpx 18rpx;
 }
-.vd-ops .del { font-size: 24rpx; color: var(--bad); margin-left: 16rpx; }
+/* 「删除」与「卡片」同款胶囊，只换语义色。
+   盒模型直接照抄 .pbtn（padding 撑高），这样两个胶囊必然等高，不依赖 box-sizing 猜测 */
+.vd-ops .delpill {
+  margin-left: 16rpx;
+  height: auto;
+  line-height: 1;
+  padding: 10rpx 18rpx;
+}
 
 /* 数据条：最左「最大单尾」放大，其余等宽 */
 .vd-statline {

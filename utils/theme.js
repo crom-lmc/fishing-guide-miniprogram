@@ -36,6 +36,40 @@ const CALLOUT = {
   light: { color: "#1B2130", bgColor: "#FFFFFF" }
 };
 
+// 画布（分享海报 / 战绩卡片）取色：canvas 画的像素同样不认 CSS 变量，
+// 不按主题切换的话，白天模式的应用里会插一张纯黑的海报，非常割裂。
+const CANVAS = {
+  dark: {
+    bg1: "#171A23", bg2: "#10131B", glow: "rgba(126,155,250,0.22)",
+    card: "rgba(255,255,255,0.05)", line: "rgba(255,255,255,0.06)",
+    tx: "#E6EAF2", mu: "#8A93A6", addr: "#9FA9BD",
+    note: "#B9C2D0", noteBar: "rgba(126,155,250,0.42)", foot: "#6B7488",
+    acc1: "#7E9BFA", acc2: "#43C4BF",
+    tagBg: "rgba(67,196,191,0.16)", tagTx: "#4FD3CE",
+    hero1: "rgba(126,155,250,0.20)", hero2: "rgba(96,140,214,0.10)", hero3: "rgba(67,196,191,0.16)",
+    glowC: "rgba(120,190,190,0.20)", glowC2: "rgba(120,190,190,0.07)",
+    ripple: ["rgba(150,180,255,0.13)", "rgba(150,180,255,0.09)", "rgba(150,180,255,0.06)"],
+    photoPh: "rgba(255,255,255,0.04)", photoPhLine: "rgba(255,255,255,0.08)", photoPhTx: "#5C6478",
+    qrPlate: "#FFFFFF", qrEdge: null, qrPh: "rgba(255,255,255,0.05)",
+    // 照片底边渐隐到背景色的 RGB 三通道（渐变停靠点要拼 alpha，只能存分量）
+    fade: "16,19,27"
+  },
+  light: {
+    bg1: "#FFFFFF", bg2: "#E9EEF6", glow: "rgba(126,155,250,0.16)",
+    card: "rgba(16,24,40,0.045)", line: "rgba(16,24,40,0.08)",
+    tx: "#1B2130", mu: "#5A6478", addr: "#5A6478",
+    note: "#3C465C", noteBar: "rgba(62,99,224,0.45)", foot: "#8A93A6",
+    acc1: "#4C6FE0", acc2: "#0E8C86",
+    tagBg: "rgba(14,140,134,0.12)", tagTx: "#0B7A75",
+    hero1: "rgba(126,155,250,0.18)", hero2: "rgba(96,140,214,0.09)", hero3: "rgba(67,196,191,0.15)",
+    glowC: "rgba(120,190,190,0.16)", glowC2: "rgba(120,190,190,0.06)",
+    ripple: ["rgba(76,111,224,0.12)", "rgba(76,111,224,0.08)", "rgba(76,111,224,0.05)"],
+    photoPh: "rgba(16,24,40,0.04)", photoPhLine: "rgba(16,24,40,0.10)", photoPhTx: "#8A93A6",
+    qrPlate: "#F3F6FB", qrEdge: "#D8E0EC", qrPh: "rgba(16,24,40,0.05)",
+    fade: "233,238,246"
+  }
+};
+
 function getMode() {
   try {
     const v = wx.getStorageSync(KEY);
@@ -69,6 +103,8 @@ function levelTx() { return LEVEL_TX[get()] || LEVEL_TX.dark; }
 // 鲜亮语义色（画头像底色、圆点用）
 function vivid() { return LEVEL_BG; }
 function callout() { return CALLOUT[get()] || CALLOUT.dark; }
+// 画布配色：调用时机要在绘制前（主题可能被切换过）
+function canvasSkin() { return CANVAS[get()] || CANVAS.dark; }
 
 function set(t) {
   try { wx.setStorageSync(KEY, t === "light" ? "light" : "dark"); } catch (e) { /* 忽略 */ }
@@ -154,5 +190,5 @@ function mix(opt) {
 module.exports = {
   KEY: KEY, get: get, set: set, setMode: setMode, getMode: getMode, systemTheme: systemTheme,
   toggle: toggle, applyChrome: applyChrome, mix: mix,
-  levelTx: levelTx, vivid: vivid, callout: callout
+  levelTx: levelTx, vivid: vivid, callout: callout, canvasSkin: canvasSkin
 };
