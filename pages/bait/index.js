@@ -58,7 +58,7 @@ Page(TH.mix({
       n: l.n, kind: l.kind, layer: l.layer, fish: l.fish, act: l.act, use: l.use,
       lv: l.lv,
       lvType: l.lv.indexOf("首选") >= 0 ? "g" : (l.lv === "进阶" ? "b" : ""),
-      _src: IM.fishSrc("images/lure/" + l.key + ".png"),
+      _src: IM.fishSrc("images/lure/" + l.key + ".webp"),
       _broken: false
     }));
     const month = new Date().getMonth() + 1;
