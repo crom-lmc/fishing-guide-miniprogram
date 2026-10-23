@@ -206,6 +206,24 @@ function num(v) {
   return isFinite(n) ? n : null;
 }
 
+// 本站气压 → 海平面气压（国际标准大气的气压高度公式）
+// p0 = p × (1 − 0.0065·h / (T + 0.0065·h + 273.15))^(−5.257)
+// 为什么必须换算：腾讯天气的 air_pressure 是「地面/本站气压」，
+// 西安海拔约 400m 时约 974 hPa；而 utils/score.js 的气压档位（1013/1015 为基准）
+// 是按海平面气压校准的。974 直接被当成「气压极低」，出钓分从 73 掉到 55。
+// 974 hPa / 400m / 10℃ → ≈1022 hPa，与 Open-Meteo 的 pressure_msl 完全对得上。
+function stationToMsl(pStation, elevationM, tempC) {
+  const p = num(pStation);
+  if (p == null || p <= 0) return null;
+  const h = num(elevationM);
+  if (h == null || h <= 1) return p;          // 海平面附近无需换算
+  const t = num(tempC);
+  const tc = t == null ? 15 : t;
+  const denom = tc + 273.15 + 0.0065 * h;
+  const factor = Math.pow(1 - (0.0065 * h) / denom, -5.257);
+  return p * factor;
+}
+
 // lat/lng 必须是 GCJ02（腾讯只认火星坐标，与 Open-Meteo 用的 WGS84 不同）
 async function fetchTencentRealtime(lat, lng) {
   if (!TENCENT_KEY) return null;
@@ -222,7 +240,11 @@ async function fetchTencentRealtime(lat, lng) {
     current: {
       time: String(rt.update_time || "").replace(" ", "T"),
       temperature_2m: num(inf.temperature),
-      pressure_msl: num(inf.air_pressure),
+      // 腾讯的 air_pressure 是「本站气压」不是海平面气压（西安约 974 hPa）。
+      // 先原样存到 pressure_station，由 exports.main 用 Open-Meteo 的海拔换算成 pressure_msl，
+      // 这样「腾讯实况 + Open-Meteo 预报」两条路的气压口径一致，分数不会再差一大截。
+      pressure_msl: null,
+      pressure_station: num(inf.air_pressure),
       wind_speed_10m: kmhOfPower(inf.wind_power_v2 || inf.wind_power),
       wind_direction_10m: degOfDir(inf.wind_direction),
       weather_code: wmoCodeOf(inf.weather)
@@ -737,7 +759,7 @@ async function nearby(lat, lng, radius, mode, coordType) {
   }
   dbg.total = list.length;
   dbg.merged = merged.length;
-  const out = { ok: true, v: 4, source: source, list: list, dbg: dbg };
+  const out = { ok: true, v: 5, source: source, list: list, dbg: dbg };
   _nearbyCache[nk] = { t: Date.now(), v: out };
   return out;
 }
@@ -746,14 +768,14 @@ exports.main = async (event) => {
   // ---- 附近水域 / 钓场检索 ----
   if (event && event.action === "nearby") {
     const nlat = parseFloat(event.lat), nlng = parseFloat(event.lng);
-    if (!isFinite(nlat) || !isFinite(nlng)) return { ok: false, v: 4, msg: "坐标缺失" };
+    if (!isFinite(nlat) || !isFinite(nlng)) return { ok: false, v: 5, msg: "坐标缺失" };
     const radius = Math.min(30000, Math.max(500, parseFloat(event.radius) || 3000));
     const mode = event.mode === "spot" ? "spot" : "water";
     try {
       return await nearby(nlat, nlng, radius, mode, event.coordType === "wgs84" ? "wgs84" : "gcj02");
     } catch (e) {
       return {
-        ok: false, v: 4,
+        ok: false, v: 5,
         reason: String(e.message || "").slice(0, 160),
         msg: "附近 POI 暂不可用：免 key 的 OpenStreetMap 数据源在国内网络基本连不上（已试 3 个镜像，全部超时）。"
           + "请到 lbs.qq.com 免费申请一个 key，在云开发控制台给本函数加环境变量 TENCENT_MAP_KEY，然后重新部署。"
@@ -765,9 +787,9 @@ exports.main = async (event) => {
   // 不拉天气数据，只走逆地址解析；复用 fetchPlace 的地名缓存，重复拖动基本不耗额度。
   if (event && event.action === "place") {
     const plat = parseFloat(event.lat), plng = parseFloat(event.lng);
-    if (!isFinite(plat) || !isFinite(plng)) return { ok: false, v: 4, msg: "坐标缺失" };
+    if (!isFinite(plat) || !isFinite(plng)) return { ok: false, v: 5, msg: "坐标缺失" };
     const r = await fetchPlace(plat, plng, event.coordType === "wgs84" ? "wgs84" : "gcj02");
-    return { ok: true, v: 4, place: (r && r.place) || "", tencent_err: (r && r.tencentErr) || "" };
+    return { ok: true, v: 5, place: (r && r.place) || "", tencent_err: (r && r.tencentErr) || "" };
   }
 
   const lat = parseFloat(event.lat), lng = parseFloat(event.lng);
@@ -800,17 +822,29 @@ exports.main = async (event) => {
 
   // 实况优先用腾讯：保留 Open-Meteo 的 hourly（曲线），只把 current 换成腾讯的
   if (txRt) {
+    const cur = Object.assign({}, txRt.current);
+    // 气压口径统一：腾讯只给本站气压，用 Open-Meteo 返回的地面海拔换算成海平面气压。
+    // 拿不到海拔时宁可用 Open-Meteo 的 pressure_msl，也不要直接把 974 当海平面气压用。
+    const elev = om && typeof om.elevation === "number" ? om.elevation : null;
+    const msl = stationToMsl(cur.pressure_station, elev, cur.temperature_2m);
+    cur.pressure_msl = msl != null
+      ? Math.round(msl * 10) / 10
+      : (om && om.current && typeof om.current.pressure_msl === "number" ? om.current.pressure_msl : null);
+    cur.pressure_src = msl != null ? "msl-converted"
+      : (cur.pressure_msl != null ? "open-meteo" : "unknown");
+
     const weather = Object.assign({}, om || {}, {
-      current: txRt.current,
+      current: cur,
       _src: "tencent",
-      _realtime: txRt._realtime
+      _realtime: txRt._realtime,
+      v: 5
     });
     if (!om) weather.hourly = null;    // 预报也没拿到时，客户端曲线降级为「暂不可用」
-    return { ok: true, weather: weather, place: place, tencent_err: tencentErr, wx_err: omErr, weather_src: "tencent" };
+    return { ok: true, weather: weather, place: place, tencent_err: tencentErr, wx_err: omErr, weather_src: "tencent", v: 5 };
   }
 
   // 腾讯不可用：完全退回 Open-Meteo（与改造前行为一致）
   if (omErr) return { ok: false, msg: omErr, place: place, tencent_err: tencentErr };
   if (!om || !om.current) return { ok: false, msg: "天气接口返回异常", place: place, tencent_err: tencentErr };
-  return { ok: true, weather: om, place: place, tencent_err: tencentErr, weather_src: "open-meteo" };
+  return { ok: true, weather: om, place: place, tencent_err: tencentErr, weather_src: "open-meteo", v: 5 };
 };

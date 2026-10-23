@@ -11,8 +11,11 @@ const S = require("./score.js");
 //   也让同一位置的地名稳定，不会一会儿这个楼一会儿那个楼。
 // 内存 + 本地存储双缓存：内存挡同一页面内的重复调用，存储挡冷启动/跨页面。
 const CACHE_TTL = 10 * 60 * 1000;
+// 缓存键随云函数逻辑升级而升级：v5 把腾讯「本站气压」换算成海平面气压后，
+// 旧缓存里 974 这种站压值会让分数偏低约 19 分。升键作废全部旧缓存，
+// 部署 v5 后重新编译即可立刻拿到换算后的数据，不必苦等 10 分钟 TTL 过期。
 // v2：v1 缓存里可能出现过一个坏字符的 place（真机渲染成乱码），升键作废全部旧缓存
-const CACHE_KEY = "fish.weather.cache.v2";
+const CACHE_KEY = "fish.weather.cache.v3";
 const CACHE_MAX = 40;
 const _mem = {};
 
@@ -42,21 +45,24 @@ function saveStore(k, item) {
   } catch (e) {}
 }
 
-// 返回 { weather: <Open-Meteo JSON>, place: "陕西省西安市未央区" }；失败都 reject
+// 返回 { weather: <Open-Meteo JSON>, place: "陕西省西安市未央区",
+//         v: 云函数版本号, weather_src: "tencent"|"open-meteo",
+//         pressure_src: "msl-converted"|"open-meteo"|"unknown" }；失败都 reject
 // coordType：本项目客户端拿到的坐标都是 GCJ02（地图组件中心 / chooseLocation / getFuzzyLocation 均取 gcj02），
 // 传下去让云函数在查境外数据源前转 WGS84 —— 不转会整体偏 400~500m，逆地理编码就落到隔壁厂区了。
-function fetchAll(lat, lng, coordType) {
+// force=true 时跳过缓存（首页「刷新」按钮用，保证部署新版本后立刻拿到最新数据，不被 10 分钟缓存挡住）。
+function fetchAll(lat, lng, coordType, force) {
   const ct = coordType || "gcj02";
   const ck = cacheKey(lat, lng, ct);
   const now = Date.now();
 
   // 1) 内存缓存
   const m = _mem[ck];
-  if (m && now - m.t < CACHE_TTL) return Promise.resolve(m.v);
+  if (!force && m && now - m.t < CACHE_TTL) return Promise.resolve(m.v);
 
   // 2) 本地存储缓存（跨页面 / 冷启动）
   const s = readStore()[ck];
-  if (s && now - s.t < CACHE_TTL) {
+  if (!force && s && now - s.t < CACHE_TTL) {
     _mem[ck] = s;
     return Promise.resolve(s.v);
   }
@@ -73,7 +79,15 @@ function fetchAll(lat, lng, coordType) {
       success: (r) => {
         const d = (r && r.result) || {};
         if (d.ok && d.weather && d.weather.current) {
-          const v = { weather: d.weather, place: d.place || "" };
+          const v = {
+            weather: d.weather,
+            place: d.place || "",
+            // 透传部署版本与数据来源，首页据此显示「云函数 v5 · 腾讯实钓 · 气压已换算海平面」，
+            // 便于确认新版本是否真的生效（不用再靠猜）。
+            v: d.v,
+            weather_src: d.weather_src || (d.weather && d.weather._src) || "",
+            pressure_src: (d.weather.current && d.weather.current.pressure_src) || ""
+          };
           const item = { t: Date.now(), v: v };
           _mem[ck] = item;
           saveStore(ck, item);

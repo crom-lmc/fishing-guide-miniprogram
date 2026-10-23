@@ -6,6 +6,7 @@ const M = require("../../utils/moon.js");
 const SUN = require("../../utils/sun.js");
 const TH = require("../../utils/theme.js");
 const PL = require("../../utils/place.js");
+const SHR = require("../../utils/share.js");
 const app = getApp();
 
 const WEATHER = [
@@ -53,7 +54,9 @@ Page(TH.mix({
     // 今日推荐目标鱼 + 月相 + 日出日落（全是本地计算，不请求接口）
     targets: [], tgWeak: false, moon: null, sun: null,
     // slider 是原生组件，颜色不认 CSS 变量，只能按主题下发
-    skin: { a1: "#7E9BFA", a2: "#43C4BF", track: "#2A3040" }
+    skin: { a1: "#7E9BFA", a2: "#43C4BF", track: "#2A3040" },
+    // 首页底部一行诊断：显示云函数版本 / 数据来源 / 气压口径，便于确认新版本是否真的生效
+    wxInfoText: ""
   },
 
   onLoad() {
@@ -508,9 +511,10 @@ Page(TH.mix({
             lat: lat, lng: lng,
             geoReady: true,
             geoLoading: false,
-            geoMsg: "已填入实时天气（" + (place ? place + "，" : "")
-              + lat.toFixed(4) + "°N, " + lng.toFixed(4) + "°E）"
-          });
+          geoMsg: "已填入实时天气（" + (place ? place + "，" : "")
+            + lat.toFixed(4) + "°N, " + lng.toFixed(4) + "°E）",
+          wxInfoText: this.wxInfoTextOf(res)
+        });
         }).catch((e) => {
           if (this._geoToken !== tk) return;
           clearTimeout(this._geoTimer);
@@ -567,7 +571,10 @@ Page(TH.mix({
     }, sec * 1000);
   },
 
-  autoWeather() {
+  // 首页「📍 刷新」按钮：force=true 跳过 10 分钟缓存，确保部署新云函数后立即拿到新数据
+  refresh() { this.autoWeather(true); },
+
+  autoWeather(force) {
     if (this.data.geoLoading) return;
     // getFuzzyLocation 已于 2026-10-21 在公众平台开通；接口与 getLocation 互斥，项目只走模糊定位（查天气精度足够）
     const tk = (this._geoToken = (this._geoToken || 0) + 1);
@@ -581,7 +588,7 @@ Page(TH.mix({
         this.setData({ geoMsg: "已定位，正在获取实时天气…" });
         // 一次云函数调用同时拿天气和地名（Open-Meteo/BigDataCloud 均无备案域名，只能走云函数代理）；
         // 地名取不到只影响展示（降级为只显示坐标），不影响天气填入
-        return W.fetchAll(p.lat, p.lng, "gcj02").then((r) => ({ j: r.weather, p: p, place: r.place }));
+        return W.fetchAll(p.lat, p.lng, "gcj02", force).then((r) => ({ j: r.weather, p: p, place: r.place, wxInfo: r }));
       })
       .then((r) => {
         if (!r || this._geoToken !== tk) return;
@@ -604,6 +611,7 @@ Page(TH.mix({
             : "已填入实时天气（" + this.geoText(p, place) + "），如有偏差可手动修正。"
         };
         // 自动填成功就收起参数区（用户手动展开过则保持展开，不打断操作）
+        extra.wxInfoText = this.wxInfoTextOf(r.wxInfo);
         if (!this._userToggled) extra.advOpen = false;
         this.applyF(f, extra);
       })
@@ -635,6 +643,19 @@ Page(TH.mix({
     this.applyF(f, { geoReady: false });   // 重置回默认参数，等下次自动定位才会重新填实时值
   },
 
+  // 把云函数返回的数据源信息拼成一行可读文字，显示在首页底部，方便确认新版本是否真的生效：
+  // 例如「腾讯实况 · 气压已换算海平面 · 云函数 v5」。pressure_src=unknown 时说明拿到的仍是旧口径（站压），
+  // 一眼就能看出 v5 是否部署成功、气压换算有没有跑起来。
+  wxInfoTextOf(info) {
+    if (!info) return "";
+    const src = info.weather_src === "open-meteo" ? "Open-Meteo" : "腾讯实况";
+    const psrc = info.pressure_src === "msl-converted" ? "气压已换算海平面"
+      : info.pressure_src === "open-meteo" ? "气压取 Open-Meteo"
+      : info.pressure_src === "unknown" ? "气压口径未知(疑似旧版)" : "";
+    const v = info.v ? "云函数 v" + info.v : "";
+    return [src, psrc, v].filter(Boolean).join(" · ");
+  },
+
   // 把当前条件直接带进渔获日志
   goLog() {
     const f = this.data.f;
@@ -645,6 +666,25 @@ Page(TH.mix({
   },
 
   goFish() { wx.switchTab({ url: "/pages/fish/list" }); },
+
+  // ===== 分享 =====
+  // 「转发给朋友」只认 onShareAppMessage，没定义这个函数菜单项就是灰的；
+  // 「分享到朋友圈」在此基础上还要求有 onShareTimeline。二者与备案、认证无关。
+  // 标题带上当前分数和等级，朋友点开前就知道今天值不值得跑一趟。
+  shareTitle() {
+    const r = this.data.result;
+    return (r && r.score != null)
+      ? "出钓指数 " + r.score + " 分 · " + (r.lv || "")
+      : "钓鱼指南 · 今日出钓指数";
+  },
+
+  onShareAppMessage() {
+    return SHR.friend(this.shareTitle(), "/pages/index/index");
+  },
+
+  onShareTimeline() {
+    return SHR.timeline(this.shareTitle());
+  },
 
   // 点「今日时机」里的目标鱼 → 直接进图鉴详情
   openFish(e) {

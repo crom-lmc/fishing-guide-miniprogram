@@ -4,12 +4,13 @@
   <view class="card">
     <view class="cardhd">
       <text class="h2">今日出钓指数</text>
-      <view class="btn ghost sm {{geoLoading ? 'dis' : ''}}" bindtap="autoWeather">{{geoLoading ? "定位中…" : "📍 刷新"}}</view>
+      <view class="btn ghost sm {{geoLoading ? 'dis' : ''}}" bindtap="refresh">{{geoLoading ? "定位中…" : "📍 刷新"}}</view>
     </view>
     <view class="georow" wx:if="{{geoMsg}}">
       <text class="tiny geo">{{geoMsg}}</text>
       <text class="tiny plink" bindtap="pickLocation">位置不准？地图选点</text>
     </view>
+    <view class="mt" wx:if="{{wxInfoText}}"><text class="tiny muted2">⛅ {{wxInfoText}}</text></view>
 
     <!-- 进页面已自动定位填好天气，参数默认折叠成一行；点开才能手动改 -->
     <view class="foldrow mt" bindtap="toggleAdv">
