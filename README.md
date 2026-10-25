@@ -3,15 +3,14 @@
 > 钓鱼指南 · 从入门到上鱼
 
 <p align="center">
-  <img src="images/qrcode-circle.jpg" width="240" alt="小程序码"><br>
-  <b>小程序码</b>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <br><br>
-  <img src="images/qrcode-square.jpg" width="240" alt="小程序二维码"><br>
-  <b>小程序二维码</b>
+  <img src="images/qrcode-circle.jpg" width="230" alt="小程序码">
+  &nbsp;&nbsp;&nbsp;
+  <img src="images/qrcode-square.jpg" width="230" alt="小程序二维码">
 </p>
 
-<p align="center">微信扫一扫，直接用（AppID：<code>wx8c1919d5d5760dde</code>）</p>
+<p align="center">
+  微信扫一扫即可打开 · AppID <code>wx8c1919d5d5760dde</code>
+</p>
 
 一个给钓鱼人用的随身工具：按实时天气算「适钓指数」，配 33 种淡水 / 海水鱼图鉴、6 类钓法教学、饵料配方与路亚假饵速查，还能记渔获、管装备、收藏钓点。
 
