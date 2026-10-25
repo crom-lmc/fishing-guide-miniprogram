@@ -2,6 +2,17 @@
 
 > 钓鱼指南 · 从入门到上鱼
 
+<p align="center">
+  <img src="images/qrcode-circle.jpg" width="240" alt="小程序码"><br>
+  <b>小程序码</b>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <br><br>
+  <img src="images/qrcode-square.jpg" width="240" alt="小程序二维码"><br>
+  <b>小程序二维码</b>
+</p>
+
+<p align="center">微信扫一扫，直接用（AppID：<code>wx8c1919d5d5760dde</code>）</p>
+
 一个给钓鱼人用的随身工具：按实时天气算「适钓指数」，配 33 种淡水 / 海水鱼图鉴、6 类钓法教学、饵料配方与路亚假饵速查，还能记渔获、管装备、收藏钓点。
 
 数据全部存在本机，不注册、不上传；想换机不丢数据可以开云同步。
@@ -139,7 +150,10 @@ fishing-guide-miniprogram/
 ├─ images/
 │  ├─ fish/   33 张鱼图（透明底 240×160，约 200KB）
 │  ├─ lure/   13 张假饵图（透明底 200×200，约 250KB）
-│  └─ tab-*.png
+│  ├─ qrcode-circle.jpg   小程序码（葵花码，公众平台下载，README 顶部展示）
+│  ├─ qrcode-square.jpg   小程序二维码（方形，带「微信扫一扫」字样）
+│  ├─ wxacode.png         海报/战绩卡片用的内置码（通用码，无 scene）
+│  └─ tab-*.png           底部 tabBar 图标
 ├─ cloudfunctions/    # weather / sync / wxacode / recFish
 └─ tools/             # 鱼图、假饵图的生成与处理脚本
 ```
