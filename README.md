@@ -4,10 +4,6 @@
 
 ![小程序码](https://cdn.jsdelivr.net/gh/crom-lmc/fishing-guide-miniprogram@main/images/qrcode-circle.jpg) ![小程序二维码](https://cdn.jsdelivr.net/gh/crom-lmc/fishing-guide-miniprogram@main/images/qrcode-square.jpg)
 
-<p align="center">
-  微信扫一扫即可打开 · AppID <code>wx8c1919d5d5760dde</code>
-</p>
-
 一个给钓鱼人用的随身工具：按实时天气算「适钓指数」，配 33 种淡水 / 海水鱼图鉴、6 类钓法教学、饵料配方与路亚假饵速查，还能记渔获、管装备、收藏钓点。
 
 数据全部存在本机，不注册、不上传；想换机不丢数据可以开云同步。
