@@ -2,7 +2,7 @@
 
 > 钓鱼指南 · 从入门到上鱼
 
-![小程序码](images/qrcode-circle.jpg) ![小程序二维码](images/qrcode-square.jpg)
+![小程序码](https://cdn.jsdelivr.net/gh/crom-lmc/fishing-guide-miniprogram@main/images/qrcode-circle.jpg) ![小程序二维码](https://cdn.jsdelivr.net/gh/crom-lmc/fishing-guide-miniprogram@main/images/qrcode-square.jpg)
 
 <p align="center">
   微信扫一扫即可打开 · AppID <code>wx8c1919d5d5760dde</code>
