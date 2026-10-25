@@ -2,11 +2,7 @@
 
 > 钓鱼指南 · 从入门到上鱼
 
-<p align="center">
-  <img src="images/qrcode-circle.jpg" width="230" alt="小程序码">
-  &nbsp;&nbsp;&nbsp;
-  <img src="images/qrcode-square.jpg" width="230" alt="小程序二维码">
-</p>
+![小程序码](images/qrcode-circle.jpg) ![小程序二维码](images/qrcode-square.jpg)
 
 <p align="center">
   微信扫一扫即可打开 · AppID <code>wx8c1919d5d5760dde</code>
