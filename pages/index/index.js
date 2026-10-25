@@ -228,19 +228,35 @@ Page(TH.mix({
 
     const rows = [];
     const params = [];
+    // 第 0 根柱是否真的就是「当前小时」？
+    // nowKey 按设备时区算，Open-Meteo 的 time 按当地时区（timezone=auto），两者不一致时 i0 会落到下一个整点，
+    // 那时第 0 根柱代表的是未来某一小时，就不能拿当前实况去覆盖它。
+    const nowHour = p2(new Date().getHours());
+    const row0IsNow = !!(H.time[i0] && H.time[i0].slice(11, 13) === nowHour);
     for (let k = 0; k < n; k++) {
       const i = i0 + k;
       const pres = H.pressure_msl[i];
-      const p = {
-        w: S.wxCodeToKey(H.weather_code[i]),
-        t: Math.round(H.temperature_2m[i]),
-        p: Math.round(pres),
-        wi: String(S.kmhToLevel(H.wind_speed_10m[i])),
-        dr: S.degToDirKey(H.wind_direction_10m[i]),
-        tm: S.timeKeyOfHour(+H.time[i].slice(11, 13)),
-        se: f.se,
-        wt: f.wt
-      };
+      // 「当前小时」这一根柱必须与顶部头条同源，否则会出现「头条 74 分、点当前小时柱子却是 84 分」的割裂：
+      // 头条取的是 current（腾讯实况观测值），柱子取的是 hourly[0]（Open-Meteo 预报值），两组数据本来就不同。
+      // 这里把第 0 根柱换成与头条完全相同的一组输入，让同一时刻只有一个答案；
+      // 其余小时仍各自取预报值 —— 不同时刻的天气本就应该不同。
+      const np = this.nowParams;
+      const useNow = k === 0 && row0IsNow && !!np;
+      const p = useNow
+        ? {
+            w: np.w, t: np.t, p: np.p, wi: np.wi, dr: np.dr,
+            tm: S.timeKeyOfHour(+H.time[i].slice(11, 13)), se: f.se, wt: f.wt
+          }
+        : {
+            w: S.wxCodeToKey(H.weather_code[i]),
+            t: Math.round(H.temperature_2m[i]),
+            p: Math.round(pres),
+            wi: String(S.kmhToLevel(H.wind_speed_10m[i])),
+            dr: S.degToDirKey(H.wind_direction_10m[i]),
+            tm: S.timeKeyOfHour(+H.time[i].slice(11, 13)),
+            se: f.se,
+            wt: f.wt
+          };
       const res = S.calcScore(p);
       params.push(p);
       const lt = TH.levelTx();
@@ -251,7 +267,8 @@ Page(TH.mix({
         color: res.score >= 75 ? lt.good
           : res.score >= 60 ? lt.mid
             : res.score >= 45 ? lt.warn : lt.bad,
-        pres: Math.round(pres * 10) / 10
+        // 折线图的气压点同步换成实测值，免得「当前气压」一会儿按预报、一会儿按实测
+        pres: useNow ? Number(np.p) : Math.round(pres * 10) / 10
       });
     }
     this.hourlyParams = params;
@@ -363,8 +380,14 @@ Page(TH.mix({
     // 回填的是某个具体时刻，之后不再让时钟自动覆盖时段/季节
     this.manualSeason = true;
     this.manualTime = true;
-    this.applyF(p);
-    wx.showToast({ title: "已回填 " + ((this.data.hourly || [])[i] || {}).hh + " 的参数", icon: "none" });
+    const hh = ((this.data.hourly || [])[i] || {}).hh || "";
+    // 关键：回填进来的参数来自 Open-Meteo 的逐时预报，已经不是「腾讯实况」了。
+    // 之前这里只填参数、不改状态行，页面底部就一直挂着定位时写的「腾讯实况 · 气压已换算海平面」，
+    // 于是「直接定位 74 分」和「回填某小时 84 分」看起来像同源算出了两个结果，
+    // 用户自然会怀疑算法算错——其实两次的输入本来就是两套数据（实况 vs 该小时的预报）。
+    // 现在回填后明确标出数据源与时刻，避免误判。
+    this.applyF(p, { wxInfoText: hh ? ("Open-Meteo 逐时预报 " + hh) : "Open-Meteo 逐时预报" });
+    wx.showToast({ title: "已回填 " + hh + " 的参数", icon: "none" });
   },
 
   // 定位结果文案：拿到地名就显示「陕西省西安市未央区」+ 坐标辅助；地名取不到就只显示坐标
@@ -506,6 +529,8 @@ Page(TH.mix({
           clearTimeout(this._geoTimer);
           this.hourly = res.weather.hourly || null;
           const f = W.toParams(res.weather.current, this.data.f.se, this.data.f.wt);
+          // 存下这一组「当前实况」参数：逐时图的第一根柱（当前小时）要复用它，详见 computeHourly
+          this.nowParams = f;
           this._weatherAt = Date.now();
           this.applyF(f, {
             lat: lat, lng: lng,
@@ -600,6 +625,8 @@ Page(TH.mix({
         // 逐时数据留着画未来 24 小时曲线（列式：time / temperature_2m / pressure_msl / ...）
         this.hourly = j.hourly || null;
         const f = W.toParams(j.current, this.data.f.se, this.data.f.wt);
+        // 同上：给 computeHourly 的「当前小时」那一根柱用，保证它与顶部头条同源同分
+        this.nowParams = f;
         this._weatherAt = Date.now();
         const extra = {
           lat: p.lat, lng: p.lng,   // 同步给日出日落计算，卡片随之切到当地
@@ -640,15 +667,21 @@ Page(TH.mix({
     this.manualSeason = false;
     this.manualTime = false;
     const f = { w: "cloudy", t: 22, p: 1012, wi: "2", dr: "none", tm: S.curTimeKey(), se: S.curSeasonIndex(), wt: "lake" };
-    this.applyF(f, { geoReady: false });   // 重置回默认参数，等下次自动定位才会重新填实时值
+    // 数据源标签也要一并清掉：参数是默认值了，底部却还挂着「Open-Meteo 逐时预报 02:00」
+    // 会让人以为这组默认数字来自某份预报。下次自动定位或地图选点会重新写回真实来源。
+    // nowParams 同理：清掉后逐时图回到纯预报口径，不再拿旧的实况值冒充「当前小时」。
+    this.nowParams = null;
+    this.applyF(f, { geoReady: false, wxInfoText: "" });   // 重置回默认参数，等下次自动定位才会重新填实时值
   },
 
   // 把云函数返回的数据源信息拼成一行可读文字，显示在首页底部，方便确认新版本是否真的生效：
-  // 例如「腾讯实况 · 气压已换算海平面 · 云函数 v5」。pressure_src=unknown 时说明拿到的仍是旧口径（站压），
-  // 一眼就能看出 v5 是否部署成功、气压换算有没有跑起来。
+  // 例如「腾讯实况 · 气压已换算海平面 · 云函数 v6」。
+  // 数据源这一项最重要：一旦变成「Open-Meteo（腾讯实况降级）」，就说明腾讯实况这次没拿到、
+  // 指数改由 Open-Meteo 计算——同一位置分数比刚才低了几分，是换源导致的，不是算法出错。
+  // pressure_src=unknown 表示两边都没给出海平面气压（此时按默认 1010 hPa 兜底）。
   wxInfoTextOf(info) {
     if (!info) return "";
-    const src = info.weather_src === "open-meteo" ? "Open-Meteo" : "腾讯实况";
+    const src = info.weather_src === "open-meteo" ? "Open-Meteo（腾讯实况降级）" : "腾讯实况";
     const psrc = info.pressure_src === "msl-converted" ? "气压已换算海平面"
       : info.pressure_src === "open-meteo" ? "气压取 Open-Meteo"
       : info.pressure_src === "unknown" ? "气压口径未知(疑似旧版)" : "";

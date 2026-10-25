@@ -15,7 +15,9 @@ const CACHE_TTL = 10 * 60 * 1000;
 // 旧缓存里 974 这种站压值会让分数偏低约 19 分。升键作废全部旧缓存，
 // 部署 v5 后重新编译即可立刻拿到换算后的数据，不必苦等 10 分钟 TTL 过期。
 // v2：v1 缓存里可能出现过一个坏字符的 place（真机渲染成乱码），升键作废全部旧缓存
-const CACHE_KEY = "fish.weather.cache.v3";
+// v4：云函数 v6 修掉了「拿不到海拔时把本站气压当海平面气压用」的 bug（西安站压 974 会让分数低十几分）。
+//     本地缓存里可能还存着按错误气压算出来的天气，升键作废，重新编译即刻生效，不必苦等 10 分钟 TTL。
+const CACHE_KEY = "fish.weather.cache.v4";
 const CACHE_MAX = 40;
 const _mem = {};
 
@@ -82,7 +84,7 @@ function fetchAll(lat, lng, coordType, force) {
           const v = {
             weather: d.weather,
             place: d.place || "",
-            // 透传部署版本与数据来源，首页据此显示「云函数 v5 · 腾讯实钓 · 气压已换算海平面」，
+            // 透传部署版本与数据来源，首页据此显示「云函数 v6 · 腾讯实况 · 气压已换算海平面」，
             // 便于确认新版本是否真的生效（不用再靠猜）。
             v: d.v,
             weather_src: d.weather_src || (d.weather && d.weather._src) || "",

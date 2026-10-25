@@ -216,7 +216,12 @@ function stationToMsl(pStation, elevationM, tempC) {
   const p = num(pStation);
   if (p == null || p <= 0) return null;
   const h = num(elevationM);
-  if (h == null || h <= 1) return p;          // 海平面附近无需换算
+  // 拿不到海拔时必须返回 null，让 exports.main 退回 Open-Meteo 的 pressure_msl（注释里一直是这么设计的）。
+  // 之前这里 return p，等于把「本站气压」原值当成海平面气压交上去，还被标成 msl-converted：
+  // 西安站压约 974 hPa 会被 presScoreFor 判成 <1005 档（0.10 适宜度），出钓指数凭空掉十几分。
+  // 这正是「腾讯分支」和「Open-Meteo 分支」分数对不上的最大放大器（单一 pressures 项权重 0.22）。
+  if (h == null) return null;
+  if (h <= 1) return p;                     // 确实在海平面附近，换算无意义，原值即为海平面气压
   const t = num(tempC);
   const tc = t == null ? 15 : t;
   const denom = tc + 273.15 + 0.0065 * h;
@@ -225,14 +230,14 @@ function stationToMsl(pStation, elevationM, tempC) {
 }
 
 // lat/lng 必须是 GCJ02（腾讯只认火星坐标，与 Open-Meteo 用的 WGS84 不同）
-async function fetchTencentRealtime(lat, lng) {
-  if (!TENCENT_KEY) return null;
+// 单次请求：成功返回标准化实况；业务失败返回 null；网络失败 throw，由上层决定是否重试
+async function tencentRealtimeOnce(lat, lng) {
   const j = await tencentGet("/ws/weather/v1/", {
     location: lat.toFixed(6) + "," + lng.toFixed(6),
     key: TENCENT_KEY,
     output: "json"
   }, 5000);
-  if (!j || j.status !== 0) return null;
+  if (!j || j.status !== 0) return null;   // 业务失败：额度 121 / 参数 311 / key 未开通 110
   const rt = j.result && j.result.realtime && j.result.realtime[0];
   if (!rt) return null;
   const inf = rt.infos || {};
@@ -253,6 +258,27 @@ async function fetchTencentRealtime(lat, lng) {
     _realtime: inf,
     _place: [rt.province, rt.city, rt.district].filter(Boolean).join("")
   };
+}
+
+// 出钓指数统一以「腾讯实况」为唯一来源：Open-Meteo 只负责 24h 逐时预报，以及腾讯彻底不可用时的兜底。
+// 腾讯是国内节点（74~237ms），偶发网络抖动（超时 / 连接中断）若不重试就会立刻回退 Open-Meteo，
+// 指数来源反复横跳——这正是「同一位置、同一时间，一会儿 80 分一会儿 84 分」的来源。
+// 因此：网络失败重试 1 次；业务失败不重试（重试必然还是失败，只会白扣每日额度）。
+async function fetchTencentRealtime(lat, lng) {
+  if (!TENCENT_KEY) return null;
+  const MAX_TRY = 2;
+  for (let attempt = 0; attempt < MAX_TRY; attempt++) {
+    try {
+      const r = await tencentRealtimeOnce(lat, lng);
+      return r;                              // 拿到就返回（业务失败时本身已是 null）
+    } catch (e) {
+      const last = attempt === MAX_TRY - 1;
+      console.log("[weather] 腾讯实况" + (last ? "重试仍失败，本次回退 Open-Meteo" : "网络抖动，重试一次")
+        + "：" + ((e && e.message) || e));
+      if (last) return null;
+    }
+  }
+  return null;
 }
 
 // ---- 繁→简：BigDataCloud localityLanguage=zh 返回繁体（如「未央區」）----
@@ -759,7 +785,7 @@ async function nearby(lat, lng, radius, mode, coordType) {
   }
   dbg.total = list.length;
   dbg.merged = merged.length;
-  const out = { ok: true, v: 5, source: source, list: list, dbg: dbg };
+  const out = { ok: true, v: 6, source: source, list: list, dbg: dbg };
   _nearbyCache[nk] = { t: Date.now(), v: out };
   return out;
 }
@@ -768,14 +794,14 @@ exports.main = async (event) => {
   // ---- 附近水域 / 钓场检索 ----
   if (event && event.action === "nearby") {
     const nlat = parseFloat(event.lat), nlng = parseFloat(event.lng);
-    if (!isFinite(nlat) || !isFinite(nlng)) return { ok: false, v: 5, msg: "坐标缺失" };
+    if (!isFinite(nlat) || !isFinite(nlng)) return { ok: false, v: 6, msg: "坐标缺失" };
     const radius = Math.min(30000, Math.max(500, parseFloat(event.radius) || 3000));
     const mode = event.mode === "spot" ? "spot" : "water";
     try {
       return await nearby(nlat, nlng, radius, mode, event.coordType === "wgs84" ? "wgs84" : "gcj02");
     } catch (e) {
       return {
-        ok: false, v: 5,
+        ok: false, v: 6,
         reason: String(e.message || "").slice(0, 160),
         msg: "附近 POI 暂不可用：免 key 的 OpenStreetMap 数据源在国内网络基本连不上（已试 3 个镜像，全部超时）。"
           + "请到 lbs.qq.com 免费申请一个 key，在云开发控制台给本函数加环境变量 TENCENT_MAP_KEY，然后重新部署。"
@@ -787,9 +813,9 @@ exports.main = async (event) => {
   // 不拉天气数据，只走逆地址解析；复用 fetchPlace 的地名缓存，重复拖动基本不耗额度。
   if (event && event.action === "place") {
     const plat = parseFloat(event.lat), plng = parseFloat(event.lng);
-    if (!isFinite(plat) || !isFinite(plng)) return { ok: false, v: 5, msg: "坐标缺失" };
+    if (!isFinite(plat) || !isFinite(plng)) return { ok: false, v: 6, msg: "坐标缺失" };
     const r = await fetchPlace(plat, plng, event.coordType === "wgs84" ? "wgs84" : "gcj02");
-    return { ok: true, v: 5, place: (r && r.place) || "", tencent_err: (r && r.tencentErr) || "" };
+    return { ok: true, v: 6, place: (r && r.place) || "", tencent_err: (r && r.tencentErr) || "" };
   }
 
   const lat = parseFloat(event.lat), lng = parseFloat(event.lng);
@@ -837,14 +863,14 @@ exports.main = async (event) => {
       current: cur,
       _src: "tencent",
       _realtime: txRt._realtime,
-      v: 5
+      v: 6
     });
     if (!om) weather.hourly = null;    // 预报也没拿到时，客户端曲线降级为「暂不可用」
-    return { ok: true, weather: weather, place: place, tencent_err: tencentErr, wx_err: omErr, weather_src: "tencent", v: 5 };
+    return { ok: true, weather: weather, place: place, tencent_err: tencentErr, wx_err: omErr, weather_src: "tencent", v: 6 };
   }
 
   // 腾讯不可用：完全退回 Open-Meteo（与改造前行为一致）
   if (omErr) return { ok: false, msg: omErr, place: place, tencent_err: tencentErr };
   if (!om || !om.current) return { ok: false, msg: "天气接口返回异常", place: place, tencent_err: tencentErr };
-  return { ok: true, weather: om, place: place, tencent_err: tencentErr, weather_src: "open-meteo", v: 5 };
+  return { ok: true, weather: om, place: place, tencent_err: tencentErr, weather_src: "open-meteo", v: 6 };
 };
