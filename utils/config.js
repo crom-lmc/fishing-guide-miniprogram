@@ -19,7 +19,7 @@ const VISION_MODEL = "glm-4v-flash";
 // 留空表示暂不启用云开发；填上后 app.js 会自动 wx.cloud.init
 const CLOUD_ENV = "";
 
-// 鱼种配图来源（默认留空 = 用小程序包内 images/fish/*.webp，33 张共 76KB）
+// 鱼种配图来源（默认留空 = 用小程序包内 images/fish/*.png，33 张共 76KB）
 // 三种写法：
 //   1. ""                        → 本地包内图片，无需任何配置（默认）
 //   2. "cloud://xxx.tcb.qcloud.la/fish"  → 微信云开发存储，不占包体、免域名白名单、免备案（推荐换网络图时用）
