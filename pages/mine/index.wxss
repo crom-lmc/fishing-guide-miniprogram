@@ -19,7 +19,175 @@
 }
 
 .qtx {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 8rpx;
 }
+
+/* 标题行：左标题 + 右分享按钮 */
+.sh-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* 外壳：宽度由 view 锁定，彻底摆脱微信 button 默认宽度（120x56rpx 小胶囊） */
+.sh-share {
+  flex: none;
+  width: 120rpx;
+  height: 56rpx;
+  overflow: hidden;
+  border-radius: 999rpx;
+}
+
+/* 分享按钮：open-type=share；只负责在外壳内铺满 */
+.share-btn {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.04);
+  color: #17A29B;
+  font-size: 26rpx;
+  line-height: 52rpx;
+  border: 2rpx solid #17A29B;
+  border-radius: 999rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+.wrap.light .share-btn { background: #FFFFFF; }
+.share-btn::after { border: none; }
+
+/* 清空本机数据：铺满整行 */
+.btn.wide {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* 登录态头部 */
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+  padding: 28rpx;
+}
+.p-av {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  flex: none;
+  overflow: hidden;
+  background: #17A29B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.p-avimg { width: 100%; height: 100%; }
+.p-avph { color: #fff; font-size: 34rpx; font-weight: 500; }
+.p-main { flex: 1; min-width: 0; }
+.p-name { font-size: 32rpx; font-weight: 500; color: var(--tx); }
+.p-sub { font-size: 24rpx; color: var(--muted); margin-top: 6rpx; }
+.p-act { margin-top: 12rpx; font-size: 24rpx; }
+.p-link { color: #17A29B; }
+
+/* 编辑资料弹窗 */
+.mask {
+  position: fixed;
+  left: 0; right: 0; top: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-end;
+  z-index: 50;
+}
+.sheet {
+  width: 100%;
+  background: var(--bg);
+  border-top-left-radius: 28rpx;
+  border-top-right-radius: 28rpx;
+  padding: 20rpx 40rpx calc(40rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* 顶部拖拽条 + 标题 */
+.sh-grab {
+  width: 72rpx;
+  height: 8rpx;
+  border-radius: 999rpx;
+  background: var(--line);
+}
+.sh-title {
+  margin-top: 20rpx;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--tx);
+  text-align: center;
+}
+
+/* 头像：外层按钮锁定正方形圆环，内层 wrap 裁圆，防止被压成椭圆 */
+.ava-btn {
+  position: relative;
+  margin: 36rpx 0 0;
+  padding: 0;
+  width: 168rpx !important;
+  height: 168rpx !important;
+  border-radius: 50%;
+  overflow: visible;
+  background: transparent;
+  box-shadow: 0 0 0 8rpx rgba(23, 162, 155, 0.16);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.ava-btn::after { border: none; }
+.ava-wrap {
+  width: 168rpx;
+  height: 168rpx;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #17A29B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ava-prev { width: 100%; height: 100%; display: block; }
+.ava-ph { color: #fff; font-size: 56rpx; font-weight: 500; }
+.ava-badge {
+  position: absolute;
+  right: -6rpx;
+  bottom: -2rpx;
+  background: #17A29B;
+  color: #FFFFFF;
+  font-size: 20rpx;
+  line-height: 1;
+  padding: 8rpx 16rpx;
+  border-radius: 999rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.15);
+}
+.ava-tip { font-size: 22rpx; color: var(--muted); margin-top: 20rpx; }
+
+/* 昵称输入：显式锁高 + 主题化背景，避免默认样式导致的白底/文字裁切 */
+.nick {
+  width: 100%;
+  height: 92rpx;
+  margin-top: 28rpx;
+  padding: 0 24rpx;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1rpx solid var(--line);
+  border-radius: 14rpx;
+  font-size: 30rpx;
+  color: var(--tx);
+  text-align: center;
+}
+.wrap.light .nick { background: #F3F6FA; }
+.nick-ph { color: var(--muted); }
+.sheet .btn { width: 100%; margin-top: 32rpx; text-align: center; border-radius: 14rpx; }

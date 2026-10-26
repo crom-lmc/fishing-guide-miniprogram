@@ -1,5 +1,44 @@
 <view class="wrap {{tc}}">
 
+  <!-- 登录态头部：纯静默登录，未登录只给提示，不弹按钮 -->
+  <view class="card profile">
+    <view class="p-av">
+      <image wx:if="{{isLogin && avatarUrl}}" src="{{avatarUrl}}" class="p-avimg" mode="aspectFill"/>
+      <view wx:else class="p-avph">{{isLogin ? '微' : ''}}</view>
+    </view>
+    <view class="p-main">
+      <block wx:if="{{isLogin}}">
+        <view class="p-name">{{nickname}}</view>
+        <view class="p-sub">云同步已开启 · 换手机不丢数据</view>
+        <view class="p-act">
+          <text class="p-link" bindtap="editProfile">编辑资料</text>
+        </view>
+      </block>
+      <block wx:else>
+        <view class="p-name">未登录</view>
+        <view class="p-sub">登录后可跨设备同步渔获与钓点</view>
+      </block>
+    </view>
+  </view>
+
+  <!-- 编辑资料弹窗（P3）：头像用 chooseAvatar，昵称用 nickname 输入 -->
+  <view class="mask" wx:if="{{editing}}" bindtap="closeEdit">
+    <view class="sheet" catchtap="noop">
+      <view class="sh-grab"></view>
+      <view class="sh-title">编辑资料</view>
+      <button class="ava-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+        <view class="ava-wrap">
+          <image wx:if="{{avatarUrl}}" src="{{avatarUrl}}" class="ava-prev" mode="aspectFill"/>
+          <view wx:else class="ava-ph">微</view>
+        </view>
+        <view class="ava-badge">更换</view>
+      </button>
+      <view class="ava-tip">点击头像，使用微信头像</view>
+      <input class="nick" type="nickname" placeholder="点击设置昵称" placeholder-class="nick-ph" value="{{nickname}}" bindinput="onNick" bindblur="onNick" bindconfirm="onNick"/>
+      <view class="btn {{saving ? 'dis' : ''}}" bindtap="saveProfile">保存</view>
+    </view>
+  </view>
+
   <view class="card accent">
     <text class="h2">我的钓鱼</text>
     <view class="stats stats4 mt">
@@ -54,7 +93,12 @@
   </view>
 
   <view class="card">
-    <text class="h3">分享给钓友</text>
+    <view class="sh-head">
+      <text class="h3">分享给钓友</text>
+      <view class="sh-share">
+        <button class="share-btn" open-type="share">分享</button>
+      </view>
+    </view>
     <view class="qrbox">
       <image class="qrimg" src="/images/wxacode.png" mode="aspectFit" bindlongpress="saveQr" />
       <view class="qtx">
@@ -68,7 +112,7 @@
     <text class="h3">关于</text>
     <text class="small muted mt">钓鱼指南 · 从入门到上鱼。出钓指数、鱼种图鉴、钓法教学、饵料配方、装备清单与渔获记录，全部数据仅保存在本机，不会上传。</text>
     <view class="hr"></view>
-    <view class="btn ghost sm" bindtap="clearAll">清空本机数据</view>
+    <view class="btn ghost wide" bindtap="clearAll">清空本机数据</view>
   </view>
 
 </view>

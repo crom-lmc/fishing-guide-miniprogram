@@ -17,7 +17,9 @@ const VISION_MODEL = "glm-4v-flash";
 
 // 云开发环境 ID（云开发控制台 → 概览里复制，形如 xxx-1a2b3c）
 // 留空表示暂不启用云开发；填上后 app.js 会自动 wx.cloud.init
-const CLOUD_ENV = "";
+// 同时启用「微信云开发免鉴权登录」：app.js 启动时静默登录、mine 页据此渲染登录态
+// 注意：登录/同步依赖云函数 sync，需右键 cloudfunctions/sync → 上传并部署（云端安装依赖）
+const CLOUD_ENV = "fishing-prod-d0ghx5mvj293c04fb";
 
 // 鱼种配图来源（默认留空 = 用小程序包内 images/fish/*.png，33 张共 76KB）
 // 三种写法：

@@ -24,6 +24,15 @@ async function ensureCollection() {
   }
 }
 
+// 通用集合创建兜底（users 资料集合用）
+async function ensure(name) {
+  try {
+    if (typeof db.createCollection === "function") await db.createCollection(name);
+  } catch (e) {
+    // -501001 / 已存在：忽略
+  }
+}
+
 // doc.get() 拿到的是文档本身；不存在时会抛错
 async function readDoc(coll, openid) {
   try {
@@ -100,6 +109,53 @@ async function handle(event) {
         spot: data ? data.spot.length : 0
       }
     };
+  }
+
+  // 登录：云开发下无需前端 wx.login，OPENID 由微信在云端给定
+  if (action === "login") {
+    const openid = wxCtx.OPENID || wxCtx.FROM_OPENID || "";
+    if (!openid) return { ok: false, msg: "取不到用户标识，云同步不可用" };
+    const users = db.collection("users");
+    let rec = null;
+    try { const r = await users.doc(openid).get(); rec = (r && r.data) || null; } catch (e) {}
+    const now = Date.now();
+    if (!rec) {
+      await ensure("users");
+      const init = { openid: openid, nickname: "微信用户", avatarUrl: "", createdAt: now, lastLoginAt: now };
+      await users.doc(openid).set({ data: init });
+      rec = init;
+    } else {
+      await users.doc(openid).update({ data: { lastLoginAt: now } });
+    }
+    return {
+      ok: true,
+      openid: openid,
+      profile: {
+        nickname: (rec && rec.nickname) || "微信用户",
+        avatarUrl: (rec && rec.avatarUrl) || ""
+      },
+      expireAt: now + 7 * 86400000
+    };
+  }
+
+  // 更新昵称 / 头像（P3 资料编辑）
+  if (action === "updateProfile") {
+    const openid = wxCtx.OPENID || wxCtx.FROM_OPENID || "";
+    if (!openid) return { ok: false, msg: "取不到用户标识" };
+    const patch = {};
+    if (event.nickname !== undefined) patch.nickname = event.nickname || "微信用户";
+    if (event.avatarUrl !== undefined) patch.avatarUrl = event.avatarUrl || "";
+    if (!Object.keys(patch).length) return { ok: true };
+    try {
+      await db.collection("users").doc(openid).update({ data: patch });
+    } catch (e) {
+      // 文档被清掉时重建
+      await ensure("users");
+      await db.collection("users").doc(openid).set({
+        data: Object.assign({ openid: openid, createdAt: Date.now(), lastLoginAt: Date.now() }, patch)
+      });
+    }
+    return { ok: true };
   }
 
   return { ok: false, msg: "未知操作：" + action };
