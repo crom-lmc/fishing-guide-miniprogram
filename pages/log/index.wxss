@@ -34,6 +34,7 @@
   gap: 16rpx;
 }
 .vd-hl { flex: 1; min-width: 0; }       /* 标题区优先占满，超长省略 */
+/* 标题单行显示，显示不下末尾省略；完整地址靠长按弹出的悬浮气泡看（见 .vd-tip） */
 .vd-title {
   display: block;
   font-size: 31rpx;
@@ -44,7 +45,25 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.vd-sub {                       /* 行政区降为副标 */
+.vd-title-hv { opacity: .6; }
+
+/* 长按标题 → 悬浮气泡显示完整地址（等价于网页的 hover tooltip）。
+   小程序没有鼠标悬浮事件，触屏上「按住」是最接近 hover 的手势；
+   气泡用 position:fixed 定位，不受 .vd 的 overflow:hidden 裁剪。 */
+.vd-tip-mask { position: fixed; left: 0; right: 0; top: 0; bottom: 0; z-index: 70; }
+.vd-tip {
+  position: fixed; z-index: 71;
+  background: var(--card);
+  border: 1rpx solid var(--a2);
+  border-radius: 14rpx;
+  padding: 18rpx 22rpx;
+  box-sizing: border-box;
+  box-shadow: 0 8rpx 28rpx rgba(0, 0, 0, .45);
+}
+.vd-tip-tx { display: block; font-size: 26rpx; line-height: 1.5; color: var(--tx); word-break: break-all; }
+.vd-tip-copy { display: block; margin-top: 14rpx; font-size: 24rpx; color: var(--a2); text-align: right; }
+
+.vd-sub {                       /* 行政区降为副标，同样单行省略 */
   display: block;
   margin-top: 4rpx;
   font-size: 22rpx;

@@ -10,15 +10,8 @@ Page(TH.mix({
     spots: [],
     located: false,
     geoMsg: "",                    // 自动定位失败时的轻提示（不弹窗、不打断）
-    shared: null,                  // 好友分享进来的钓点（数据经页面参数传递，不在本机 storage）
-    // 「导航到钓点」路线面板（逻辑与 spot 页一致）
-    routeVisible: false,
-    routeLoading: false,
-    routeMode: "driving",
-    route: null,
-    pline: [],
-    mapPts: [],
-    routeErr: ""
+    shared: null                   // 好友分享进来的钓点（数据经页面参数传递，不在本机 storage）
+    // 「导航到钓点」路线面板已抽成公共组件 components/route-nav，状态由组件自己维护
   },
 
   onLoad(options) {
@@ -316,7 +309,9 @@ Page(TH.mix({
     });
   },
 
-  // ---- 导航到钓点（逻辑与 spot 页一致：getFuzzyLocation 起点 → map 云函数算路线 → 面板展示，开始导航走 openLocation）----
+  // ---- 导航到钓点 ----
+  // 路线面板已抽成公共组件 components/route-nav（与钓点详情页、渔获日志页共用），
+  // 这里只负责把目标交给组件：getFuzzyLocation 起点 → map 云函数算路线 → 面板展示 → openLocation
   navToSpot(e) {
     this.beginNav(e.currentTarget.dataset.s);
   },
@@ -328,79 +323,9 @@ Page(TH.mix({
 
   beginNav(target) {
     if (!target || !target.lat || !target.lng) return;
-    this._navTarget = target;   // 供 startNav 使用
-    wx.getFuzzyLocation({
-      type: "gcj02",
-      success: (loc) => {
-        const from = loc.latitude + "," + loc.longitude;
-        const to = target.lat + "," + target.lng;
-        this.setData({ routeVisible: true, routeLoading: true, routeErr: "", route: null, pline: [], mapPts: [] });
-        this.fetchRoute(from, to, this.data.routeMode);
-      },
-      fail: () => {
-        wx.showToast({ title: "无法获取当前位置，改用地图导航", icon: "none" });
-        this.startNav();
-      }
-    });
+    const nav = this.selectComponent("#routeNav");
+    if (nav) nav.open(target);
   },
-
-  // WXML 表达式不支持模板字符串与 Math，显示文本在 JS 预格式化
-  fmtRoute(r) {
-    if (!r) return r;
-    const d = r.distance || 0, t = r.duration || 0;
-    r._dist = d >= 1000 ? (d / 1000).toFixed(1) + " km" : d + " m";
-    r._dur = t >= 60 ? Math.floor(t / 60) + " 小时 " + (t % 60) + " 分" : t + " 分钟";
-    (r.steps || []).forEach(s => {
-      s._dt = s.dist ? "（" + (s.dist >= 1000 ? (s.dist / 1000).toFixed(1) + "km" : s.dist + "m") + "）" : "";
-    });
-    return r;
-  },
-
-  fetchRoute(from, to, mode) {
-    this._from = from; this._to = to;
-    this.setData({ routeLoading: true, routeErr: "", routeMode: mode });
-    wx.cloud.callFunction({
-      name: "map",
-      data: { action: "direction", from: from, to: to, mode: mode },
-      success: (res) => {
-        const r = res && res.result;
-        if (r && r.ok) {
-          const route = this.fmtRoute(r.route);
-          const pts = route.polyline || [];
-          this.setData({
-            route: route,
-            pline: pts.length ? [{ points: pts, color: "#3FA9F5CC", width: 6, arrowLine: true }] : [],
-            mapPts: pts,
-            routeLoading: false
-          });
-        }
-        else this.setData({ routeErr: (r && r.msg) || "路线规划失败", route: null, pline: [], mapPts: [], routeLoading: false });
-      },
-      fail: () => this.setData({ routeErr: "云函数调用失败，请检查 map 是否已部署", route: null, pline: [], mapPts: [], routeLoading: false })
-    });
-  },
-
-  switchRouteMode(e) {
-    const mode = e.currentTarget.dataset.mode;
-    if (mode === this.data.routeMode && this.data.route) return;
-    if (!this._from) return;
-    this.fetchRoute(this._from, this._to, mode);
-  },
-
-  // 真正拉起导航：走微信原生地图（openLocation），由系统选择腾讯/高德等地图 App
-  startNav() {
-    const t = this._navTarget;
-    if (!t) return;
-    wx.openLocation({
-      latitude: t.lat, longitude: t.lng,
-      name: t.name || "钓点", address: t.addr || "", scale: 15
-    });
-  },
-
-  closeRoute() { this.setData({ routeVisible: false }); },
-
-  // 仅用于 catchtap 阻止冒泡（点面板内不关闭）
-  stop() {},
 
   // ===== 分享到微信 =====
   // 转发给好友/群：onShareAppMessage（任意页面可用，无需申请接口）

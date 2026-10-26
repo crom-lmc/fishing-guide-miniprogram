@@ -7,6 +7,14 @@ const V = require("../../utils/vision.js");
 const W = require("../../utils/weather.js");
 const PL = require("../../utils/place.js");
 const TH = require("../../utils/theme.js");
+const FP = require("../../utils/file.js");
+
+// 永久照片路径都落在用户目录下（真机 wxfile://usr/…，开发者工具 http://usr/…）。
+// chooseMedia 返回的临时路径只在本次会话有效，下次启动就失效，不能当永久路径用。
+function isPersistedPhoto(p) {
+  const s = String(p || "");
+  return s.indexOf("/usr/") >= 0;
+}
 
 function today() {
   const d = new Date();
@@ -41,6 +49,7 @@ Page(TH.mix({
     recMsg: "",
     recognizing: false,
     locating: false,         // 静默定位进行中，防止连点
+    tip: null,               // 长按标题弹出的完整地址气泡 { text, style }，null 表示不显示
     timer: { on: false, start: 0, text: "", begin: "", spot: "", weather: "" }
   },
 
@@ -88,7 +97,10 @@ Page(TH.mix({
         _md: (d[1] && d[2]) ? d[1] + "." + d[2] : (r.date || ""),   // B 右上角短日期：10.22
         _week: dt ? w[dt.getDay()] : "",                              // B 右上角星期：周四
         _region: idx >= 0 ? sp.slice(0, idx) : "",
-        _name: idx >= 0 ? sp.slice(idx + 3) : sp
+        _name: idx >= 0 ? sp.slice(idx + 3) : sp,
+        // 历史记录里可能存着已失效的临时路径（改版前没做持久化），直接不渲染，
+        // 否则 image 加载失败会按默认高度占位，卡片下方出现大片空白
+        _photo: isPersistedPhoto(r.photo) ? r.photo : ""
       });
     });
     const total = raw.reduce((a, r) => a + (+r.count || 0), 0);
@@ -371,15 +383,26 @@ Page(TH.mix({
   },
 
   // 记录带坐标时，点钓点名称复制高德导航链接（小程序内不能直接跳外部 App）
+  // 点「查看导航」：直接拉起微信内置地图，里面就能一键导航。
+  // 存的坐标本来就是 GCJ-02（火星坐标），与 openLocation 口径一致，不用换算。
+  // 点「查看导航」：弹出路线规划面板（距离 / 预计时长 / 沿途指引），
+  // 与钓点地图页、钓点详情页用的是同一个公共组件 components/route-nav
   openAmap(e) {
+    const d = e.currentTarget.dataset;
+    const lat = +d.lat, lng = +d.lng;
+    if (!lat || !lng) return;
+    const nav = this.selectComponent("#routeNav");
+    if (!nav) return;
+    nav.open({ lat: lat, lng: lng, name: d.name || "钓点", addr: d.addr || "" });
+  },
+
+  // 长按「查看导航」：复制高德链接，方便发给钓友（点击是开地图，长按才是复制）
+  copyNav(e) {
     const d = e.currentTarget.dataset;
     if (!d.lat || !d.lng) return;
     const url = "https://uri.amap.com/marker?position=" + d.lng + "," + d.lat
       + "&name=" + encodeURIComponent(d.name || "钓点");
-    wx.setClipboardData({
-      data: url,
-      success: () => wx.showToast({ title: "导航链接已复制", icon: "none" })
-    });
+    wx.setClipboardData({ data: url });
   },
 
   // 点标签选鱼种：已选中的再点一次 = 取消（输入框同步清空）
@@ -399,9 +422,70 @@ Page(TH.mix({
           if (snap[k] && String(f[k]) === String(snap[k])) f[k] = "";
         });
         this.recFilled = null;
-        this.setData({ form: f, "form.photo": r.tempFiles[0].tempFilePath, recMsg: "" });
+        const tmp = r.tempFiles[0].tempFilePath;
+        this.setData({ form: f, "form.photo": tmp, recMsg: "" });
+        // tempFilePath 只在本次会话有效，必须转存到用户目录，否则下次启动图片就废了：
+        // 加载失败的 image 会按默认高度占位，卡片下方就出现大片空白。
+        FP.savePhoto(tmp).then((saved) => {
+          if (this.data.form.photo === tmp) this.setData({ "form.photo": saved });
+        }).catch(() => {
+          FP.trim();   // 可能是照片太多占满空间，清理旧的再让用户重试
+          this.setData({ recMsg: "照片保存失败，请重选一张" });
+        });
       }
     });
+  },
+
+  // 照片加载不出来（文件被清、路径失效）时隐藏这张图，别让 image 按默认高度撑出空白
+  onPhotoErr(e) {
+    const id = e.currentTarget.dataset.id;
+    if (id == null) return;
+    const list = this.data.list.map((x) =>
+      x.id === id ? Object.assign({}, x, { _photo: "" }) : x);
+    this.setData({ list: list });
+  },
+
+  // 点标题：展开 / 收起完整地址（默认单行省略，长地址会被截断）
+  // 长按标题：把完整地址复制到剪贴板
+  // 长按标题：在标题下方弹出悬浮气泡显示完整地址（触屏没有 hover，「按住」是最接近的手势）。
+  // 气泡位置来自元素的 boundingClientRect，用 position:fixed 定位，
+  // 这样不会被 .vd 卡片的 overflow:hidden 裁掉。
+  showSpotTip(e) {
+    const d = e.currentTarget.dataset;
+    const full = d.full;
+    if (!full) {
+      wx.showToast({ title: "这条没记地址", icon: "none" });
+      return;
+    }
+    const win = (wx.getWindowInfo && wx.getWindowInfo()) || wx.getSystemInfoSync() || {};
+    const vw = win.windowWidth || 375, vh = win.windowHeight || 667;
+    const maxW = vw - 24;
+    const put = (rect) => {
+      let style;
+      if (rect) {
+        // 贴着标题左边缘，但不越出屏幕两侧
+        const left = Math.max(12, Math.min(rect.left, vw - 200));
+        // 下方放得下就放下面，放不下就翻到标题上方（用 bottom 定位，不用预先知道气泡高度）
+        style = (vh - rect.bottom > 160)
+          ? "left:" + left + "px;top:" + Math.round(rect.bottom + 8) + "px;max-width:" + maxW + "px;"
+          : "left:" + left + "px;bottom:" + Math.round(vh - rect.top + 8) + "px;max-width:" + maxW + "px;";
+      } else {
+        style = "left:12px;top:200px;max-width:" + maxW + "px;";
+      }
+      this.setData({ tip: { text: full, style: style } });
+    };
+    wx.createSelectorQuery().in(this).select("#t" + d.id).boundingClientRect()
+      .exec((res) => put(res && res[0]));
+  },
+
+  hideTip() { this.setData({ tip: null }); },
+
+  // 气泡里的「复制地址」：catchtap 阻止冒泡，不会顺带把气泡关掉
+  copyTip() {
+    const t = this.data.tip;
+    if (!t || !t.text) return;
+    wx.setClipboardData({ data: t.text });
+    this.hideTip();
   },
 
   // 🤖 识别鱼获：自动填鱼种 / 尾数 / 最大单尾
@@ -456,8 +540,10 @@ Page(TH.mix({
       title: "删除这条记录？", content: "删除后无法恢复。", confirmColor: "#F87171",
       success: (r) => {
         if (!r.confirm) return;
-        const list = (app.get(app.KEYS.LOG, []) || []).filter(x => x.id !== id);
-        app.set(app.KEYS.LOG, list);
+        const list = app.get(app.KEYS.LOG, []) || [];
+        const gone = list.filter(x => x.id === id)[0];
+        app.set(app.KEYS.LOG, list.filter(x => x.id !== id));
+        if (gone && isPersistedPhoto(gone.photo)) FP.removePhoto(gone.photo);
         this.refresh();
       }
     });

@@ -92,7 +92,9 @@
       <view class="vd-body">
         <view class="vd-head">
           <view class="vd-hl">
-            <text class="vd-title">{{item._name || item.spot || '未命名记录'}}</text>
+            <text class="vd-title" id="t{{item.id}}" hover-class="vd-title-hv"
+                  data-id="{{item.id}}" data-full="{{item.spot}}"
+                  bindlongpress="showSpotTip">{{item._name || item.spot || '未命名记录'}}</text>
             <text class="vd-sub" wx:if="{{item._region}}">{{item._region}}</text>
           </view>
           <view class="vd-meta">
@@ -105,18 +107,18 @@
         </view>
 
         <view class="vd-statline">
-          <view class="vd-hero" wx:if="{{item.max}}">
-            <view class="vd-hero-top"><text class="vd-hero-v">{{item.max}}</text><text class="vd-hero-u">kg</text></view>
+          <view class="vd-hero">
+            <view class="vd-hero-top"><text class="vd-hero-v">{{item.max || '—'}}</text><text class="vd-hero-u" wx:if="{{item.max}}">kg</text></view>
             <text class="vd-hero-k">最大单尾</text>
           </view>
-          <view class="vd-sm" wx:if="{{item.count}}"><text class="vd-sm-v">{{item.count}}</text><text class="vd-sm-k">尾数</text></view>
-          <view class="vd-sm" wx:if="{{item.hours}}"><text class="vd-sm-v">{{item.hours}}</text><text class="vd-sm-k">时长 h</text></view>
-          <view class="vd-sm" wx:if="{{item.fish}}"><text class="vd-sm-v vt">{{item.fish}}</text><text class="vd-sm-k">鱼种</text></view>
+          <view class="vd-sm"><text class="vd-sm-v">{{item.count || '—'}}</text><text class="vd-sm-k">尾数</text></view>
+          <view class="vd-sm"><text class="vd-sm-v">{{item.hours || '—'}}</text><text class="vd-sm-k">时长 h</text></view>
+          <view class="vd-sm"><text class="vd-sm-v {{item.fish ? 'vt' : ''}}">{{item.fish || '—'}}</text><text class="vd-sm-k">鱼种</text></view>
         </view>
 
-        <text class="vd-geo small" wx:if="{{item.lat}}" data-lat="{{item.lat}}" data-lng="{{item.lng}}" data-name="{{item.spot}}" bindtap="openAmap">📍 查看导航</text>
+        <text class="vd-geo small" wx:if="{{item.lat}}" data-lat="{{item.lat}}" data-lng="{{item.lng}}" data-name="{{item._name || item.spot}}" data-addr="{{item.spot}}" bindtap="openAmap" bindlongpress="copyNav" hover-class="vd-title-hv">📍 查看导航</text>
         <text class="small muted mt" wx:if="{{item.note}}">{{item.note}}</text>
-        <image wx:if="{{item.photo}}" src="{{item.photo}}" class="photo mt" mode="widthFix" />
+        <image wx:if="{{item._photo}}" src="{{item._photo}}" class="photo mt" mode="widthFix" lazy-load binderror="onPhotoErr" data-id="{{item.id}}" />
       </view>
     </view>
   </view>
@@ -130,5 +132,15 @@
   <!-- 静默定位用的隐藏地图：不占版面、不可见，只借它的 moveToLocation 拿精确坐标 -->
   <map id="logMap" class="geohide" latitude="{{form.lat || 34.3416}}" longitude="{{form.lng || 108.9398}}"
        show-location bindregionchange="onGeoRegionChange"></map>
+
+  <!-- 导航到钓点：路线规划面板（与钓点地图页 / 钓点详情页同款公共组件） -->
+  <route-nav id="routeNav" />
+
+  <!-- 长按标题弹出的完整地址气泡：点任意处关闭，点「复制地址」复制到剪贴板 -->
+  <view class="vd-tip-mask" wx:if="{{tip}}" bindtap="hideTip"></view>
+  <view class="vd-tip" wx:if="{{tip}}" style="{{tip.style}}" bindtap="hideTip">
+    <text class="vd-tip-tx">{{tip.text}}</text>
+    <text class="vd-tip-copy" catchtap="copyTip">复制地址</text>
+  </view>
 
 </view>

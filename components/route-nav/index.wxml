@@ -1,0 +1,49 @@
+<!-- 路线规划面板（公共组件）
+     用法：页面 wxml 放 <route-nav id="routeNav" />，
+           再调用 this.selectComponent('#routeNav').open({ lat, lng, name, addr })。
+     流程与原来 map / spot 两页内联实现完全一致：
+       getFuzzyLocation 取起点 → map 云函数算路线 → 面板展示 → 开始导航走 openLocation -->
+<view class="route-mask" wx:if="{{visible}}" bindtap="close">
+  <view class="route-sheet" catchtap="stop">
+    <view class="route-hd">
+      <text class="route-title">导航到钓点</text>
+      <text class="route-close" bindtap="close">✕</text>
+    </view>
+
+    <view class="route-tabs">
+      <text class="rt {{mode==='driving'?'on':''}}" data-mode="driving" bindtap="switchMode">🚗 驾车</text>
+      <text class="rt {{mode==='bicycling'?'on':''}}" data-mode="bicycling" bindtap="switchMode">🚲 骑行</text>
+      <text class="rt {{mode==='walking'?'on':''}}" data-mode="walking" bindtap="switchMode">🚶 步行</text>
+    </view>
+
+    <view class="route-body" wx:if="{{loading}}">
+      <text class="small muted">正在规划路线…</text>
+    </view>
+    <view class="route-body" wx:elif="{{err}}">
+      <text class="small muted">{{err}}</text>
+    </view>
+    <view class="route-body" wx:elif="{{route}}">
+      <map wx:if="{{pline.length}}" class="route-map" id="routeMapNav"
+           latitude="{{mapPts[0].latitude}}" longitude="{{mapPts[0].longitude}}"
+           polyline="{{pline}}" include-points="{{mapPts}}"
+           enable-zoom="{{false}}" enable-scroll="{{false}}" enable-rotate="{{false}}">
+      </map>
+      <view class="route-sum">
+        <view class="rs"><text class="rs-v">{{route._dist}}</text><text class="rs-k">距离</text></view>
+        <view class="rs"><text class="rs-v">{{route._dur}}</text><text class="rs-k">预计{{route.modeName}}</text></view>
+      </view>
+      <view class="route-steps">
+        <view class="rstep" wx:for="{{route.steps}}" wx:key="index">
+          <text class="rsi">{{index+1}}</text>
+          <text class="rsx">{{item.text}}{{item._dt}}</text>
+        </view>
+        <text class="tiny muted" wx:if="{{route.steps.length === 0}}">沿途指引暂不可用，直接开始导航即可。</text>
+      </view>
+    </view>
+
+    <view class="route-actions">
+      <text class="btn ghost" bindtap="close">关闭</text>
+      <text class="btn" bindtap="startNav">开始导航</text>
+    </view>
+  </view>
+</view>

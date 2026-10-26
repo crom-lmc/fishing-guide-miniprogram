@@ -80,49 +80,6 @@
     <text class="tiny muted">出钓前请自行确认该处是否允许垂钓；收费钓场请事先征得同意并缴费。</text>
   </view>
 
-  <!-- 导航到钓点：路线规划面板（底部弹出） -->
-  <view class="route-mask" wx:if="{{routeVisible}}" bindtap="closeRoute">
-    <view class="route-sheet" catchtap="stop">
-      <view class="route-hd">
-        <text class="route-title">导航到钓点</text>
-        <text class="route-close" bindtap="closeRoute">✕</text>
-      </view>
-
-      <view class="route-tabs">
-        <text class="rt {{routeMode==='driving'?'on':''}}" data-mode="driving" bindtap="switchRouteMode">🚗 驾车</text>
-        <text class="rt {{routeMode==='bicycling'?'on':''}}" data-mode="bicycling" bindtap="switchRouteMode">🚲 骑行</text>
-        <text class="rt {{routeMode==='walking'?'on':''}}" data-mode="walking" bindtap="switchRouteMode">🚶 步行</text>
-      </view>
-
-      <view class="route-body" wx:if="{{routeLoading}}">
-        <text class="small muted">正在规划路线…</text>
-      </view>
-      <view class="route-body" wx:elif="{{routeErr}}">
-        <text class="small muted">{{routeErr}}</text>
-      </view>
-      <view class="route-body" wx:elif="{{route}}">
-        <map wx:if="{{pline.length}}" class="route-map" id="routeMap"
-             latitude="{{mapPts[0].latitude}}" longitude="{{mapPts[0].longitude}}"
-             polyline="{{pline}}" include-points="{{mapPts}}"
-             enable-zoom="{{false}}" enable-scroll="{{false}}" enable-rotate="{{false}}">
-        </map>
-        <view class="route-sum">
-          <view class="rs"><text class="rs-v">{{route._dist}}</text><text class="rs-k">距离</text></view>
-          <view class="rs"><text class="rs-v">{{route._dur}}</text><text class="rs-k">预计{{route.modeName}}</text></view>
-        </view>
-        <view class="route-steps">
-          <view class="rstep" wx:for="{{route.steps}}" wx:key="index">
-            <text class="rsi">{{index+1}}</text>
-            <text class="rsx">{{item.text}}{{item._dt}}</text>
-          </view>
-          <text class="tiny muted" wx:if="{{route.steps.length === 0}}">沿途指引暂不可用，直接开始导航即可。</text>
-        </view>
-      </view>
-
-      <view class="route-actions">
-        <text class="btn ghost" bindtap="closeRoute">关闭</text>
-        <text class="btn" bindtap="startNav">开始导航</text>
-      </view>
-    </view>
-  </view>
+  <!-- 导航到钓点：路线规划面板（公共组件，与钓点地图页、渔获日志页共用） -->
+  <route-nav id="routeNav" />
 </view>

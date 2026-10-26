@@ -1,1 +1,6 @@
-{ "navigationBarTitleText": "钓点地图", "usingComponents": {} }
+{
+  "navigationBarTitleText": "钓点地图",
+  "usingComponents": {
+    "route-nav": "/components/route-nav/index"
+  }
+}

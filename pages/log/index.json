@@ -1,1 +1,6 @@
-{ "navigationBarTitleText": "渔获日志", "usingComponents": {} }
+{
+  "navigationBarTitleText": "渔获日志",
+  "usingComponents": {
+    "route-nav": "/components/route-nav/index"
+  }
+}
