@@ -95,9 +95,7 @@
   <view class="card">
     <view class="sh-head">
       <text class="h3">分享给钓友</text>
-      <view class="sh-share">
-        <button class="share-btn" open-type="share">分享</button>
-      </view>
+      <button class="share-btn" open-type="share">分享</button>
     </view>
     <view class="qrbox">
       <image class="qrimg" src="/images/wxacode.png" mode="aspectFit" bindlongpress="saveQr" />
