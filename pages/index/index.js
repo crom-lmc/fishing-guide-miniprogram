@@ -70,19 +70,13 @@ Page(TH.mix({
       f.tm = S.curTimeKey();
     }
     this.applyF(f);
-    // 首次进入自动定位取天气：延迟一点，等隐藏的地图组件初始化完
-    // （组件未就绪时 preciseLocate 会失败，自动落到 fuzzyLocate，城市级坐标查天气也够用）
-    clearTimeout(this._autoTimer);
-    this._autoTimer = setTimeout(() => {
-      if (!this._weatherAt) this.autoWeather();
-    }, 600);
+    // 首屏自动定位取天气：定位走 wx.getLocation（GPS 级、gcj02），不依赖任何地图组件，
+    // 无地图引擎/Wasm 初始化，启动轻、精度准；getLocation 不可用时自动降级 getFuzzyLocation。
+    if (!this._weatherAt) this.autoWeather();
   },
 
   onUnload() {
-    clearTimeout(this._autoTimer);
     clearTimeout(this._geoTimer);
-    clearTimeout(this._plTimer);
-    clearTimeout(this._geoReadTimer);
   },
 
   // 折叠区开关：展开后可手动改天气/气温/气压/风力/风向/时段/季节
@@ -401,107 +395,24 @@ Page(TH.mix({
     return place + how + " " + coord;
   },
 
-  // 定位：优先精确（地图组件中心对齐），失败才退模糊定位
+  // 定位：优先 GPS 精确（wx.getLocation, gcj02），失败降级模糊（getFuzzyLocation，城市级）。
+  // 不再依赖首页内嵌地图组件 —— 去掉地图引擎/Wasm 初始化后，启动更轻、且不牺牲定位精度。
   locate() {
-    return this.preciseLocate().catch(() => this.fuzzyLocate());
+    return this.gpsLocate().catch(() => this.fuzzyLocate());
   },
 
-  // 精确定位：不用 wx.getLocation（未开通，且与已开通的 getFuzzyLocation 互斥），
-  // 改用地图组件的 moveToLocation —— 只依赖 scope.userLocation 授权（与「钓点地图」页同一套，实测可用），
-  // 视野对齐真实位置后读组件中心，即 GPS 精度坐标。
-  preciseLocate() {
+  // 精确 GPS 定位（gcj02，与 chooseLocation 坐标体系一致，避免两套坐标互偏 400~500m）
+  gpsLocate() {
     return new Promise((resolve, reject) => {
-      let done = false;
-      // settle 后立刻作废回调句柄，防止迟到的 regionchange / getCenterLocation 再动一次状态
-      const finish = (fn, arg) => {
-        if (done) return;
-        done = true;
-        clearTimeout(this._plTimer);
-        this._geoResolve = null;
-        this._geoReject = null;
-        fn(arg);
-      };
-      const ok = (v) => finish(resolve, v);
-      const no = (e) => finish(reject, e);
-
-      const ctx = wx.createMapContext("geoMap", this);
-      const start = () => {
-        // 判断「地图是否真的动了」的基准，必须锁定为【首次进入时的默认中心】，不能取 this.data.lat/lng：
-        // 精确定位成功后下面第 461 行会把 data.lat/lng 刷成真实位置，
-        // 于是下一次 moveToLocation 到位后，中心与「上一次的位置」完全相同，
-        // 会被 readGeoCenter 的 geo:notmoved 防御误判成失败 → 降级 fuzzyLocate；
-        // 再下一次基准又变成那个模糊位置，于是「一次精确、一次模糊」严格交替。
-        // 基准固定住，这个交替就消失了（地图已在真实位置时，中心 ≠ 默认中心，判定为真的动过）。
-        if (!this._defaultCenter) this._defaultCenter = { lat: this.data.lat, lng: this.data.lng };
-        this._geoFrom = this._defaultCenter;
-        this._lastCenter = null;
-        ctx.moveToLocation({
-          success: () => {
-            this._geoResolve = ok;
-            this._geoReject = no;
-            clearTimeout(this._geoReadTimer);
-            // regionchange end 偶发不触发，兜底 1.2s 后强制读（readGeoCenter 内部还会等稳定）
-            this._geoReadTimer = setTimeout(() => this.readGeoCenter(0), 1200);
-          },
-          fail: (e) => no(e || { errMsg: "moveToLocation:fail" })
-        });
-      };
-      // 6 秒还没结果就放弃精确定位：授权弹窗被忽略、地图组件未就绪、回调不来，
-      // 都会让 Promise 一直悬着、页面永远停在「定位中」。超时后交给 fuzzyLocate 兜底。
-      this._plTimer = setTimeout(() => no({ errMsg: "geo:timeout" }), 6000);
-      // 先确认 scope.userLocation 授权在，否则低版本可能“回调成功但其实没移动”
-      wx.getSetting({
-        success: (s) => {
-          if (s.authSetting["scope.userLocation"]) start();
-          else wx.authorize({ scope: "scope.userLocation", success: start, fail: no });
-        },
-        fail: start
-      });
-    });
-  },
-
-  onGeoRegionChange(e) {
-    const d = (e && e.detail) || {};
-    if (d.type === "end" && this._geoResolve) {
-      clearTimeout(this._geoReadTimer);
-      // 移动结束再等一拍，避开动画最后一帧
-      this._geoReadTimer = setTimeout(() => this.readGeoCenter(0), 120);
-    }
-  },
-
-  // 连续读中心，两次结果稳定（≤1m）才认账 —— 避免读到 moveToLocation 动画中间帧导致坐标偏移
-  readGeoCenter(round) {
-    if (!this._geoResolve) return;
-    const r = round || 0;
-    wx.createMapContext("geoMap", this).getCenterLocation({
-      success: (c) => {
-        const prev = this._lastCenter;
-        this._lastCenter = { lat: c.latitude, lng: c.longitude };
-        const stable = !!prev && Math.abs(prev.lat - c.latitude) < 1e-5 && Math.abs(prev.lng - c.longitude) < 1e-5;
-        if (!stable && r < 6) {                    // 还在动：250ms 后再读，最多 6 轮（约 1.5s）
-          this._geoReadTimer = setTimeout(() => this.readGeoCenter(r + 1), 250);
-          return;
-        }
-        const resolve = this._geoResolve, reject = this._geoReject;
-        this._geoResolve = null;
-        this._geoReject = null;
-        this._lastCenter = null;
-        // 防御：中心与定位前完全一致 = 地图没动（隐藏组件未初始化），拿到的是默认中心，判失败交模糊兜底
-        const from = this._geoFrom || { lat: 0, lng: 0 };
-        if (Math.abs(c.latitude - from.lat) < 1e-6 && Math.abs(c.longitude - from.lng) < 1e-6) {
-          reject({ errMsg: "geo:notmoved" });
-          return;
-        }
-        this.setData({ lat: c.latitude, lng: c.longitude });
-        resolve({ lat: c.latitude, lng: c.longitude, fuzzy: false });
-      },
-      fail: (e) => {
-        const reject = this._geoReject;
-        this._geoResolve = null;
-        this._geoReject = null;
-        this._lastCenter = null;
-        if (reject) reject(e || { errMsg: "getCenterLocation:fail" });
+      if (!wx.getLocation) {
+        reject(new Error("当前微信版本不支持定位，请手动填写。"));
+        return;
       }
+      wx.getLocation({
+        type: "gcj02",
+        success: (pos) => resolve({ lat: pos.latitude, lng: pos.longitude, fuzzy: false }),
+        fail: reject
+      });
     });
   },
 
@@ -565,7 +476,7 @@ Page(TH.mix({
     });
   },
 
-  // 兜底：模糊定位（城市级，偏差可达数公里）；只在精确路径失败（拒授权/组件未就绪）时才用，文案会标注
+  // 兜底：模糊定位（城市级，偏差可达数公里）；只在精确路径（getLocation）失败（拒授权/不支持）时才用
   fuzzyLocate() {
     return new Promise((resolve, reject) => {
       if (!wx.getFuzzyLocation) {
@@ -601,10 +512,10 @@ Page(TH.mix({
 
   autoWeather(force) {
     if (this.data.geoLoading) return;
-    // getFuzzyLocation 已于 2026-10-21 在公众平台开通；接口与 getLocation 互斥，项目只走模糊定位（查天气精度足够）
+    // 定位走 wx.getLocation（GPS 级，gcj02）；getLocation 不可用时由 locate() 自动降级 getFuzzyLocation（城市级）
     const tk = (this._geoToken = (this._geoToken || 0) + 1);
     this.setData({ geoMsg: "正在定位…", geoLoading: true });
-    // 定位最多 6s（preciseLocate 内部会自己超时降级），天气再给 6s，共 12s 兜底
+    // 定位 + 天气共 12s 兜底：定位失败/超时由 catch 收尾，天气请求另有余量
     this.armWatchdog(tk, 12, "定位超时。可点下方「位置不准？地图选点」手动指定，或直接展开参数手动填。");
 
     this.locate()

@@ -281,9 +281,4 @@
       <view class="btn ghost sm" bindtap="goFish">看看这些鱼怎么钓 →</view>
     </view>
   </view>
-  <!-- 精确定位用的隐藏地图：移出可视区但保留尺寸，
-       靠 moveToLocation 让中心对齐真实位置、再读中心坐标（详见 index.js preciseLocate） -->
-  <map id="geoMap" class="geohide" latitude="{{lat}}" longitude="{{lng}}"
-       show-location bindregionchange="onGeoRegionChange"></map>
-
 </view>
